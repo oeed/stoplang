@@ -1,6 +1,6 @@
 use crate::{
   ast::{expression::Expression, identifier::Identifier, AstResult},
-  token::{Keyword, Operator, TokenStream},
+  token::{Grammar, Keyword, Operator, TokenStream},
 };
 
 use super::Statement;
@@ -18,6 +18,21 @@ impl<'a> Conditional<'a> {
       return Ok(None);
     }
 
-    let condition = Expression::try_expression(tokens);
+    let condition = Expression::try_expression(tokens)?;
+    let true_block = Statement::try_block(tokens)?;
+    if tokens.try_keyword(Keyword::Else).is_ok() {
+      let false_block = Statement::try_block(tokens)?;
+      Ok(Some(Conditional {
+        condition,
+        true_block,
+        false_block,
+      }))
+    } else {
+      Ok(Some(Conditional {
+        condition,
+        true_block,
+        false_block: Vec::new(),
+      }))
+    }
   }
 }

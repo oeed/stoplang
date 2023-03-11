@@ -1,4 +1,4 @@
-use crate::token::{Delimiter, Keyword, Operator, TokenStream};
+use crate::token::{Grammar, Keyword, Operator, TokenStream};
 
 use super::{identifier::Identifier, AstError, AstResult};
 
@@ -30,14 +30,19 @@ impl<'a> Expression<'a> {
       Expression::Number(number)
     } else if let Some(identifier) = tokens.try_identifier_opt()? {
       // see if there are brackets, indicating a function call
-      if tokens.try_delimiter(Delimiter::CloseBracket).is_ok() {
-        let arguments = Vec::new();
+      if tokens.try_delimiter(Grammar::CloseBracket).is_ok() {
+        let mut arguments = Vec::new();
         loop {
-          if tokens.try_delimiter(Delimiter::OpenBracket).is_ok() {
+          if tokens.try_delimiter(Grammar::OpenBracket).is_ok() {
             // end of arguments
             break;
           }
           arguments.push(Expression::try_expression(tokens)?);
+
+          if tokens.try_delimiter(Grammar::Comma).is_err() {
+            // no comma, this must also be the end of arguments, expect an open bracket
+            tokens.try_delimiter(Grammar::OpenBracket)?;
+          }
         }
         Expression::Call {
           function: identifier,

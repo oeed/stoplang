@@ -7,7 +7,7 @@ pub struct TokenError(&'static str);
 pub type TokenResult<T> = Result<T, TokenError>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Delimiter {
+pub enum Grammar {
   OpenBracket,
   CloseBracket,
   OpenCurly,
@@ -16,9 +16,9 @@ pub enum Delimiter {
   Comma,
 }
 
-impl Delimiter {
+impl Grammar {
   fn str(&self) -> &'static str {
-    use Delimiter::*;
+    use Grammar::*;
     match self {
       OpenBracket => "(",
       CloseBracket => ")",
@@ -26,13 +26,13 @@ impl Delimiter {
       CloseCurly => "}",
       DoubleQuote => "\"",
       Comma => ",",
+      Assign => "=",
     }
   }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Operator {
-  Assign,
   Equals,
   Divide,
   Multiply,
@@ -46,7 +46,6 @@ impl Operator {
   fn str(&self) -> &'static str {
     use Operator::*;
     match self {
-      Assign => "=",
       Equals => "==",
       Divide => "*",
       Multiply => "/",
@@ -59,7 +58,7 @@ impl Operator {
 
   pub fn operators() -> &'static [Operator] {
     use Operator::*;
-    &[Assign, Equals, Divide, Multiply, Add, Subtract, And, Or]
+    &[Equals, Divide, Multiply, Add, Subtract, And, Or]
   }
 }
 
@@ -218,7 +217,7 @@ impl<'a> TokenStream<'a> {
   pub fn try_string_opt(&mut self) -> TokenResult<Option<&'a str>> {
     self.skip_noop();
 
-    if self.try_chars(Delimiter::DoubleQuote.str()).is_err() {
+    if self.try_chars(Grammar::DoubleQuote.str()).is_err() {
       return Ok(None);
     }
     for n in 1.. {
@@ -228,7 +227,7 @@ impl<'a> TokenStream<'a> {
 
       // TODO: unsure what an unfinished string will do here
       let char = str.chars().nth(0).unwrap();
-      if char == Delimiter::DoubleQuote.str().chars().next().unwrap() {
+      if char == Grammar::DoubleQuote.str().chars().next().unwrap() {
         let inner_str = self.consume_next_n(n - 1).unwrap();
         return Ok(Some(inner_str));
       }
@@ -236,7 +235,7 @@ impl<'a> TokenStream<'a> {
     unreachable!()
   }
 
-  fn try_chars(&mut self, str: &str) -> TokenResult<&'_ str> {
+  fn try_chars<'b>(&mut self, str: &'b str) -> TokenResult<&'b str> {
     self.skip_noop();
 
     if self.peek_next_n(str.len()) == Some(str) {
@@ -251,7 +250,7 @@ impl<'a> TokenStream<'a> {
     self.try_chars(operator.str()).map(|_| operator)
   }
 
-  pub fn try_delimiter(&mut self, delimiter: Delimiter) -> TokenResult<Delimiter> {
+  pub fn try_delimiter(&mut self, delimiter: Grammar) -> TokenResult<Grammar> {
     self.try_chars(delimiter.str()).map(|_| delimiter)
   }
 
