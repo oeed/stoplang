@@ -7,7 +7,7 @@ pub mod expression;
 pub mod identifier;
 pub mod statement;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq, Eq)]
 pub enum AstError {
   #[error(transparent)]
   TokenError(#[from] TokenError),
@@ -15,11 +15,14 @@ pub enum AstError {
   MissingExpression,
   #[error("missing statement")]
   MissingStatement,
+  #[error("missing identifier")]
+  MissingIdentifier,
 }
 pub type AstResult<T> = Result<T, AstError>;
 
+#[derive(Debug)]
 pub struct Ast<'a> {
-  statements: Vec<Statement<'a>>,
+  pub statements: Vec<Statement<'a>>,
 }
 
 impl<'a> Ast<'a> {

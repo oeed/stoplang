@@ -4,11 +4,9 @@ code executes from the bottom up \\
 {
   assignment is inverted, so set a as b is \\ b = a
 }
-(arg1, arg2)hello fn
+(1arg, 2arg)hello fn
 
-pass arguments in the opposite direction than you specified them \\ (arg2, arg1)name
-
-logical operators are inverted \\ true && false < - not sure about this
+pass arguments in the opposite direction than you specified them \\ (2arg, 1arg)name
 
 {
   this branch will execute \\

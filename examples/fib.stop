@@ -1,0 +1,12 @@
+
+(5fib)print
+
+(5)fibonacci = 5fib
+
+{
+  (n - 1)fibonacci + (n - 2)fibonacci return
+  
+  {
+    n return
+  } n <= 1 if
+} (n)fibonacci fn

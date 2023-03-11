@@ -1,9 +1,9 @@
 use crate::ast::identifier::Identifier;
 use thiserror::Error;
 
-#[derive(Error, Debug)]
+#[derive(PartialEq, Eq, Error, Debug)]
 #[error("token error: {0}")]
-pub struct TokenError(&'static str);
+pub struct TokenError(String);
 pub type TokenResult<T> = Result<T, TokenError>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -26,7 +26,6 @@ impl Grammar {
       CloseCurly => "}",
       DoubleQuote => "\"",
       Comma => ",",
-      Assign => "=",
     }
   }
 }
@@ -38,8 +37,14 @@ pub enum Operator {
   Multiply,
   Add,
   Subtract,
+  Lte,
+  Gte,
+  Lt,
+  Gt,
   And,
   Or,
+  Not,
+  Assign,
 }
 
 impl Operator {
@@ -47,18 +52,26 @@ impl Operator {
     use Operator::*;
     match self {
       Equals => "==",
-      Divide => "*",
-      Multiply => "/",
-      Add => "-",
-      Subtract => "+",
+      Divide => "/",
+      Multiply => "*",
+      Add => "+",
+      Subtract => "-",
+      Lte => "<=",
+      Gte => ">=",
+      Lt => "<",
+      Gt => ">",
       And => "&&",
       Or => "||",
+      Not => "!",
+      Assign => "=",
     }
   }
 
   pub fn operators() -> &'static [Operator] {
     use Operator::*;
-    &[Equals, Divide, Multiply, Add, Subtract, And, Or]
+    &[
+      Equals, Divide, Multiply, Add, Subtract, Lte, Gte, Lt, Gt, And, Or, Not, Assign,
+    ]
   }
 }
 
@@ -69,6 +82,7 @@ pub enum Keyword {
   Fn,
   True,
   False,
+  Return,
 }
 
 impl Keyword {
@@ -80,6 +94,7 @@ impl Keyword {
       Fn => "fn",
       True => "true",
       False => "false",
+      Return => "return",
     }
   }
 }
@@ -102,30 +117,39 @@ impl<'a> TokenStream<'a> {
     }
   }
 
-  fn peek_next_n(&mut self, n: usize) -> Option<&'a str> {
-    self
-      .next_position
-      .and_then(|next_pos| self.string.get(next_pos - n..next_pos)) // TODO: might fail with negative numbers
+  /// Peek at the next `n` character, if there are not `n` many characters left returns `None`
+  fn peek_next_n(&self, n: usize) -> Option<&'a str> {
+    self.next_position.and_then(|next_pos| {
+      if n <= next_pos + 1 {
+        self.string.get(next_pos + 1 - n..=next_pos)
+      } else {
+        None
+      }
+    })
   }
 
   fn consume_next_n(&mut self, n: usize) -> Option<&'a str> {
     if let Some(next_pos) = self.next_position {
-      let char = self
-        .string
-        .get(next_pos - n..next_pos)
-        .expect("next_position should always be valid");
-      if next_pos >= n {
-        self.next_position = Some(next_pos - n);
+      if n <= next_pos + 1 {
+        let char = self
+          .string
+          .get(next_pos + 1 - n..=next_pos)
+          .expect("next_position should always be valid");
+        if next_pos >= n {
+          self.next_position = Some(next_pos - n);
+        } else {
+          self.next_position = None;
+        }
+        Some(char)
       } else {
-        self.next_position = None;
+        None
       }
-      Some(char)
     } else {
       None
     }
   }
 
-  fn peek_next_char(&mut self) -> Option<char> {
+  fn peek_next_char(&self) -> Option<char> {
     self.peek_next_n(1).and_then(|str| str.chars().nth(0))
   }
 
@@ -135,19 +159,25 @@ impl<'a> TokenStream<'a> {
 
   // Skip any comments or whitespace
   pub fn skip_noop(&mut self) {
-    if let Some(next_char) = self.peek_next_char() {
-      if next_char.is_whitespace() {
-        // consume the whitespace, then repeat.
-        self.consume_next_char();
-        return self.skip_noop();
-      } else if next_char == '\\' && self.peek_next_n(2) == Some("\\\\") {
-        // start of a comment, read until the end of the line
-        loop {
-          match self.consume_next_char() {
-            Some('\n') | None => break,
-            _ => continue,
+    loop {
+      if let Some(next_char) = self.peek_next_char() {
+        if next_char.is_whitespace() {
+          // consume the whitespace, then repeat.
+          self.consume_next_char();
+          return self.skip_noop();
+        } else if next_char == '\\' && self.peek_next_n(2) == Some("\\\\") {
+          // start of a comment, read until the end of the line
+          loop {
+            match self.consume_next_char() {
+              Some('\n') | None => break,
+              _ => continue,
+            }
           }
+        } else {
+          break;
         }
+      } else {
+        break;
       }
     }
   }
@@ -167,9 +197,9 @@ impl<'a> TokenStream<'a> {
       let char = str.chars().nth(0).unwrap();
       if n == 1 {
         if !Identifier::is_valid_first_char(char) {
-          return Err(TokenError(
-            "invalid first character of identifier, must only be alphabetic or _",
-          ));
+          return Err(TokenError(format!(
+            "invalid first character '{char}' of identifier, must only be alphabetic or _"
+          )));
         }
       } else if !Identifier::is_valid_char(char) {
         // end of identifier
@@ -179,37 +209,47 @@ impl<'a> TokenStream<'a> {
     unreachable!()
   }
 
+  pub fn try_identifier(&mut self) -> TokenResult<Identifier<'a>> {
+    self
+      .try_identifier_opt()?
+      .ok_or_else(|| TokenError("missing identifier".to_string()))
+  }
+
   pub fn try_number_opt(&mut self) -> TokenResult<Option<f64>> {
     self.skip_noop();
     let mut had_decimal = false; // whether a decimal has already been seen
     for n in 1.. {
-      let str = match self.peek_next_n(n) {
-        Some(str) => str,
-        None => return Ok(None),
+      match self.peek_next_n(n) {
+        Some(str) => {
+          let char = str.chars().nth(0).unwrap();
+          if n == 1 && !char.is_numeric() {
+            return Ok(None);
+          } else if char.is_numeric() {
+            continue;
+          } else if char == '.' {
+            if n == 1 {
+              return Err(TokenError("number cannot end in decimal".to_string()));
+            } else if had_decimal {
+              return Err(TokenError("invalid number, cannot have multiple decimals".to_string()));
+            } else {
+              had_decimal = true;
+            }
+            continue;
+          } else {
+            // non-number char, thus end of number
+          }
+        }
+        None if n == 1 => return Ok(None),
+        None => (), // end of file, thus end of number
       };
 
-      let char = str.chars().nth(0).unwrap();
-      if n == 1 && !char.is_numeric() {
-        return Ok(None);
-      } else if char.is_numeric() {
-        continue;
-      } else if char == '.' {
-        if n == 1 {
-          return Err(TokenError("number cannot end in decimal"));
-        } else if had_decimal {
-          return Err(TokenError("invalid number, cannot have multiple decimals"));
-        } else {
-          had_decimal = true;
-        }
-      } else {
-        // end of number
-        let number_str = self.consume_next_n(n - 1).unwrap();
-        return Ok(Some(
-          number_str
-            .parse()
-            .expect("number parsing restrictions should result in valid float"),
-        ));
-      }
+      // end of number
+      let number_str = self.consume_next_n(n - 1).unwrap();
+      return Ok(Some(
+        number_str
+          .parse()
+          .expect("number parsing restrictions should result in valid float"),
+      ));
     }
     unreachable!()
   }
@@ -223,12 +263,13 @@ impl<'a> TokenStream<'a> {
     for n in 1.. {
       let str = self
         .peek_next_n(n)
-        .ok_or(TokenError("expected string, found nothing"))?;
+        .ok_or_else(|| TokenError("expected string, found nothing".to_string()))?;
 
       // TODO: unsure what an unfinished string will do here
       let char = str.chars().nth(0).unwrap();
       if char == Grammar::DoubleQuote.str().chars().next().unwrap() {
         let inner_str = self.consume_next_n(n - 1).unwrap();
+        self.consume_next_char(); // consume the trailing "
         return Ok(Some(inner_str));
       }
     }
@@ -242,7 +283,7 @@ impl<'a> TokenStream<'a> {
       self.consume_next_n(str.len());
       Ok(str)
     } else {
-      Err(TokenError("expected chars"))
+      Err(TokenError(format!("expected: {str}")))
     }
   }
 
@@ -250,8 +291,8 @@ impl<'a> TokenStream<'a> {
     self.try_chars(operator.str()).map(|_| operator)
   }
 
-  pub fn try_delimiter(&mut self, delimiter: Grammar) -> TokenResult<Grammar> {
-    self.try_chars(delimiter.str()).map(|_| delimiter)
+  pub fn try_grammar(&mut self, grammar: Grammar) -> TokenResult<Grammar> {
+    self.try_chars(grammar.str()).map(|_| grammar)
   }
 
   pub fn try_keyword(&mut self, keyword: Keyword) -> TokenResult<Keyword> {
@@ -264,14 +305,84 @@ impl<'a> TokenStream<'a> {
         .and_then(|str| str.chars().nth(0))
       {
         if Identifier::is_valid_char(after_char) {
-          return Err(TokenError("invalid keyword"));
+          return Err(TokenError(format!("invalid keyword: {after_char}{}", keyword.str())));
         }
       }
 
       self.consume_next_n(keyword.str().len());
       Ok(keyword)
     } else {
-      Err(TokenError("expected keyword"))
+      Err(TokenError(format!("expected keyword '{}'", keyword.str())))
     }
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn keyword() {
+    let mut tokens = TokenStream::new(" if ");
+    assert_eq!(tokens.try_keyword(Keyword::If), Ok(Keyword::If));
+  }
+
+  #[test]
+  fn grammar() {
+    let mut tokens = TokenStream::new(" () ");
+    assert!(tokens.try_grammar(Grammar::CloseCurly).is_err(),);
+    assert_eq!(tokens.try_grammar(Grammar::CloseBracket), Ok(Grammar::CloseBracket));
+    assert_eq!(tokens.try_grammar(Grammar::OpenBracket), Ok(Grammar::OpenBracket));
+  }
+
+  #[test]
+  fn operator() {
+    let mut tokens = TokenStream::new("+ == ");
+    assert_eq!(tokens.try_operator(Operator::Equals), Ok(Operator::Equals));
+    assert_eq!(tokens.try_operator(Operator::Add), Ok(Operator::Add));
+  }
+
+  #[test]
+  fn string_opt() {
+    let mut tokens = TokenStream::new(" \"hello there\" ");
+    assert_eq!(tokens.try_string_opt(), Ok(Some("hello there")));
+    assert_eq!(tokens.try_string_opt(), Ok(None));
+  }
+
+  #[test]
+  fn number_opt() {
+    let mut tokens = TokenStream::new(" 1 33.01 55 ");
+    assert_eq!(tokens.try_number_opt(), Ok(Some(55.)));
+    assert_eq!(tokens.try_number_opt(), Ok(Some(33.01)));
+    assert_eq!(tokens.try_number_opt(), Ok(Some(1.)));
+    assert_eq!(tokens.try_number_opt(), Ok(None));
+  }
+
+  #[test]
+  fn identifier_opt() {
+    let mut tokens = TokenStream::new("  2mY_var ");
+    assert_eq!(tokens.try_identifier_opt(), Ok(Some(Identifier("2mY_var"))));
+    assert_eq!(tokens.try_identifier_opt(), Ok(Some(Identifier("arg1"))));
+    assert_eq!(tokens.try_identifier_opt(), Ok(None));
+  }
+
+  #[test]
+  fn identifier_invalid() {
+    let mut tokens = TokenStream::new(" var2 ");
+    assert!(tokens.try_identifier_opt().is_err());
+  }
+
+  #[test]
+  fn skip_noop() {
+    let mut tokens = TokenStream::new(
+      " blah \\\\
+    
+      blah again\\\\
+
+       ",
+    );
+    assert!(!tokens.is_empty());
+    tokens.skip_noop();
+    assert!(tokens.is_empty());
   }
 }

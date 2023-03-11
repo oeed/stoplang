@@ -1,3 +1,4 @@
+#[derive(Debug, PartialEq, Eq)]
 pub struct Identifier<'a>(pub &'a str);
 
 impl<'a> Identifier<'a> {
