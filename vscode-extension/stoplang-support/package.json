@@ -1,0 +1,25 @@
+{
+  "name": "stoplang-support",
+  "displayName": "Stoplang Support",
+  "description": "",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.76.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [{
+      "id": "stop",
+      "aliases": ["Stop", "stop"],
+      "extensions": [".stop"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "stop",
+      "scopeName": "source.stop",
+      "path": "./syntaxes/stop.tmLanguage.json"
+    }]
+  }
+}

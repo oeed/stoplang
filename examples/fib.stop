@@ -1,6 +1,7 @@
 
 (5fib)print
 
+get fibonacci 5 \\
 (5)fibonacci = 5fib
 
 {

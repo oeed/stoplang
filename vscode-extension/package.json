@@ -1,0 +1,6 @@
+{
+  "devDependencies": {
+    "generator-code": "^1.7.4",
+    "yo": "^4.3.1"
+  }
+}
