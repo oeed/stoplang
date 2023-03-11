@@ -5,13 +5,12 @@ code executes from the bottom up \\
 {
   assignment is inverted, so set a as b is \\ b = a
 }
-(😅, 😂)name fn
+(arg1, arg2)hello fn
 
 pass arguments in the opposite direction than you specified them \\ (arg2, arg1)name
 
 logical operators are inverted \\ true && false < - not sure about this
 
-brace brackets are also opposite \\
 {
   this branch will execute \\
 }
@@ -22,12 +21,13 @@ else
 (true) if
 if statements are inverted \\
 
-👹 is 8 (i.e. 4 * 2) \\ 4 * 2 = 👹
-🤡 is 2 (i.e. 4 / 2) \\ 4 / 2 = 🤡
-🎃 is 3 (i.e. 2 + 1) \\ 2 - 1 = 🎃
-🤠 is 1 (i.e. 2 - 1) \\ 2 + 1 = 🤠
+d is 8 (i.e. 4 * 2) \\ 4 * 2 = d
+c is 2 (i.e. 4 / 2) \\ 4 / 2 = c
+b is 3 (i.e. 2 + 1) \\ 2 - 1 = b
+a is 1 (i.e. 2 - 1) \\ 2 + 1 = a
 arithmitic is inverted \\
 
-prints "dlrow olleh" \\ (😀)print
-strings are all reversed \\ "hello world" = 😀
+prints "dlrow olleh" \\ (msg)print
+strings are all reversed \\ "hello world" = msg
 variable names must be emojis \\ 
+
