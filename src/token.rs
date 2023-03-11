@@ -1,35 +1,65 @@
 use crate::ast::identifier::Identifier;
+use thiserror::Error;
 
+#[derive(Error, Debug)]
+#[error("token error: {0}")]
 pub struct TokenError(&'static str);
 pub type TokenResult<T> = Result<T, TokenError>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Operator {
+pub enum Delimiter {
   OpenBracket,
   CloseBracket,
   OpenCurly,
   CloseCurly,
+  DoubleQuote,
+  Comma,
+}
+
+impl Delimiter {
+  fn str(&self) -> &'static str {
+    use Delimiter::*;
+    match self {
+      OpenBracket => "(",
+      CloseBracket => ")",
+      OpenCurly => "{",
+      CloseCurly => "}",
+      DoubleQuote => "\"",
+      Comma => ",",
+    }
+  }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Operator {
+  Assign,
   Equals,
   Divide,
   Multiply,
   Add,
   Subtract,
+  And,
+  Or,
 }
 
 impl Operator {
   fn str(&self) -> &'static str {
     use Operator::*;
     match self {
-      OpenBracket => "(",
-      CloseBracket => ")",
-      OpenCurly => "{",
-      CloseCurly => "}",
-      Equals => "=",
+      Assign => "=",
+      Equals => "==",
       Divide => "*",
       Multiply => "/",
       Add => "-",
       Subtract => "+",
+      And => "&&",
+      Or => "||",
     }
+  }
+
+  pub fn operators() -> &'static [Operator] {
+    use Operator::*;
+    &[Assign, Equals, Divide, Multiply, Add, Subtract, And, Or]
   }
 }
 
@@ -105,12 +135,12 @@ impl<'a> TokenStream<'a> {
   }
 
   // Skip any comments or whitespace
-  fn skip_inop(&mut self) {
+  pub fn skip_noop(&mut self) {
     if let Some(next_char) = self.peek_next_char() {
       if next_char.is_whitespace() {
         // consume the whitespace, then repeat.
         self.consume_next_char();
-        return self.skip_inop();
+        return self.skip_noop();
       } else if next_char == '\\' && self.peek_next_n(2) == Some("\\\\") {
         // start of a comment, read until the end of the line
         loop {
@@ -123,12 +153,17 @@ impl<'a> TokenStream<'a> {
     }
   }
 
-  pub fn try_identifier(&mut self) -> TokenResult<Identifier<'a>> {
-    self.skip_inop();
+  pub fn is_empty(&self) -> bool {
+    self.next_position.is_none()
+  }
+
+  pub fn try_identifier_opt(&mut self) -> TokenResult<Option<Identifier<'a>>> {
+    self.skip_noop();
     for n in 1.. {
-      let str = self
-        .peek_next_n(n)
-        .ok_or(TokenError("expected identifier, found nothing"))?;
+      let str = match self.peek_next_n(n) {
+        Some(str) => str,
+        None => return Ok(None),
+      };
 
       let char = str.chars().nth(0).unwrap();
       if n == 1 {
@@ -139,22 +174,25 @@ impl<'a> TokenStream<'a> {
         }
       } else if !Identifier::is_valid_char(char) {
         // end of identifier
-        return Ok(Identifier(self.consume_next_n(n - 1).unwrap()));
+        return Ok(Some(Identifier(self.consume_next_n(n - 1).unwrap())));
       }
     }
     unreachable!()
   }
 
-  pub fn try_number(&mut self) -> TokenResult<f64> {
-    self.skip_inop();
+  pub fn try_number_opt(&mut self) -> TokenResult<Option<f64>> {
+    self.skip_noop();
     let mut had_decimal = false; // whether a decimal has already been seen
     for n in 1.. {
-      let str = self
-        .peek_next_n(n)
-        .ok_or(TokenError("expected number, found nothing"))?;
+      let str = match self.peek_next_n(n) {
+        Some(str) => str,
+        None => return Ok(None),
+      };
 
       let char = str.chars().nth(0).unwrap();
-      if char.is_numeric() {
+      if n == 1 && !char.is_numeric() {
+        return Ok(None);
+      } else if char.is_numeric() {
         continue;
       } else if char == '.' {
         if n == 1 {
@@ -167,29 +205,58 @@ impl<'a> TokenStream<'a> {
       } else {
         // end of number
         let number_str = self.consume_next_n(n - 1).unwrap();
-        return Ok(
+        return Ok(Some(
           number_str
             .parse()
             .expect("number parsing restrictions should result in valid float"),
-        );
+        ));
       }
     }
     unreachable!()
   }
 
-  pub fn try_operator(&mut self, operator: Operator) -> TokenResult<Operator> {
-    self.skip_inop();
+  pub fn try_string_opt(&mut self) -> TokenResult<Option<&'a str>> {
+    self.skip_noop();
 
-    if self.peek_next_n(operator.str().len()) == Some(operator.str()) {
-      self.consume_next_n(operator.str().len());
-      Ok(operator)
+    if self.try_chars(Delimiter::DoubleQuote.str()).is_err() {
+      return Ok(None);
+    }
+    for n in 1.. {
+      let str = self
+        .peek_next_n(n)
+        .ok_or(TokenError("expected string, found nothing"))?;
+
+      // TODO: unsure what an unfinished string will do here
+      let char = str.chars().nth(0).unwrap();
+      if char == Delimiter::DoubleQuote.str().chars().next().unwrap() {
+        let inner_str = self.consume_next_n(n - 1).unwrap();
+        return Ok(Some(inner_str));
+      }
+    }
+    unreachable!()
+  }
+
+  fn try_chars(&mut self, str: &str) -> TokenResult<&'_ str> {
+    self.skip_noop();
+
+    if self.peek_next_n(str.len()) == Some(str) {
+      self.consume_next_n(str.len());
+      Ok(str)
     } else {
-      Err(TokenError("expected operator"))
+      Err(TokenError("expected chars"))
     }
   }
 
+  pub fn try_operator(&mut self, operator: Operator) -> TokenResult<Operator> {
+    self.try_chars(operator.str()).map(|_| operator)
+  }
+
+  pub fn try_delimiter(&mut self, delimiter: Delimiter) -> TokenResult<Delimiter> {
+    self.try_chars(delimiter.str()).map(|_| delimiter)
+  }
+
   pub fn try_keyword(&mut self, keyword: Keyword) -> TokenResult<Keyword> {
-    self.skip_inop();
+    self.skip_noop();
 
     if self.peek_next_n(keyword.str().len()) == Some(keyword.str()) {
       // ensure the following character is not a valid identifier character
