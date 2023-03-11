@@ -1,7 +1,7 @@
 use crate::ast::identifier::Identifier;
 
-struct TokenError(&'static str);
-type TokenResult<T> = Result<T, TokenError>;
+pub struct TokenError(&'static str);
+pub type TokenResult<T> = Result<T, TokenError>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Operator {
@@ -55,14 +55,14 @@ impl Keyword {
   }
 }
 
-struct TokenStream<'a> {
+pub struct TokenStream<'a> {
   // position of the next character, starts at the final index. `None` if at the end of the string.
   next_position: Option<usize>,
   string: &'a str,
 }
 
 impl<'a> TokenStream<'a> {
-  fn new(string: &'a str) -> Self {
+  pub fn new(string: &'a str) -> Self {
     TokenStream {
       next_position: if string.is_empty() {
         None
@@ -74,12 +74,17 @@ impl<'a> TokenStream<'a> {
   }
 
   fn peek_next_n(&mut self, n: usize) -> Option<&'a str> {
-    self.next_position.and_then(|next| self.string.get(next - n..next))
+    self
+      .next_position
+      .and_then(|next_pos| self.string.get(next_pos - n..next_pos)) // TODO: might fail with negative numbers
   }
 
   fn consume_next_n(&mut self, n: usize) -> Option<&'a str> {
     if let Some(next_pos) = self.next_position {
-      let char = self.string[next_pos];
+      let char = self
+        .string
+        .get(next_pos - n..next_pos)
+        .expect("next_position should always be valid");
       if next_pos >= n {
         self.next_position = Some(next_pos - n);
       } else {
@@ -92,11 +97,11 @@ impl<'a> TokenStream<'a> {
   }
 
   fn peek_next_char(&mut self) -> Option<char> {
-    self.peek_next_n(1).map(|str| str[0])
+    self.peek_next_n(1).and_then(|str| str.chars().nth(0))
   }
 
   fn consume_next_char(&mut self) -> Option<char> {
-    self.consume_next_n(1).map(|str| str[0])
+    self.consume_next_n(1).and_then(|str| str.chars().nth(0))
   }
 
   // Skip any comments or whitespace
@@ -106,11 +111,11 @@ impl<'a> TokenStream<'a> {
         // consume the whitespace, then repeat.
         self.consume_next_char();
         return self.skip_inop();
-      } else if next_char == "\\" && self.peek_next_n(2) == Some("\\\\") {
+      } else if next_char == '\\' && self.peek_next_n(2) == Some("\\\\") {
         // start of a comment, read until the end of the line
         loop {
           match self.consume_next_char() {
-            Some("\n") | None => break,
+            Some('\n') | None => break,
             _ => continue,
           }
         }
@@ -125,18 +130,19 @@ impl<'a> TokenStream<'a> {
         .peek_next_n(n)
         .ok_or(TokenError("expected identifier, found nothing"))?;
 
-      let char = str[0];
+      let char = str.chars().nth(0).unwrap();
       if n == 1 {
         if !Identifier::is_valid_first_char(char) {
           return Err(TokenError(
             "invalid first character of identifier, must only be alphabetic or _",
           ));
-        } else if !Identifier::is_valid_char(char) {
-          // end of identifier
-          return Ok(self.consume_next_n(n - 1).unwrap());
         }
+      } else if !Identifier::is_valid_char(char) {
+        // end of identifier
+        return Ok(Identifier(self.consume_next_n(n - 1).unwrap()));
       }
     }
+    unreachable!()
   }
 
   pub fn try_number(&mut self) -> TokenResult<f64> {
@@ -147,10 +153,10 @@ impl<'a> TokenStream<'a> {
         .peek_next_n(n)
         .ok_or(TokenError("expected number, found nothing"))?;
 
-      let char: char = str[0];
+      let char = str.chars().nth(0).unwrap();
       if char.is_numeric() {
         continue;
-      } else if char == "." {
+      } else if char == '.' {
         if n == 1 {
           return Err(TokenError("number cannot end in decimal"));
         } else if had_decimal {
@@ -168,9 +174,12 @@ impl<'a> TokenStream<'a> {
         );
       }
     }
+    unreachable!()
   }
 
   pub fn try_operator(&mut self, operator: Operator) -> TokenResult<Operator> {
+    self.skip_inop();
+
     if self.peek_next_n(operator.str().len()) == Some(operator.str()) {
       self.consume_next_n(operator.str().len());
       Ok(operator)
@@ -180,9 +189,14 @@ impl<'a> TokenStream<'a> {
   }
 
   pub fn try_keyword(&mut self, keyword: Keyword) -> TokenResult<Keyword> {
+    self.skip_inop();
+
     if self.peek_next_n(keyword.str().len()) == Some(keyword.str()) {
       // ensure the following character is not a valid identifier character
-      if let Some(after_char) = self.peek_next_n(keyword.str().len() + 1).map(|str| str[0]) {
+      if let Some(after_char) = self
+        .peek_next_n(keyword.str().len() + 1)
+        .and_then(|str| str.chars().nth(0))
+      {
         if Identifier::is_valid_char(after_char) {
           return Err(TokenError("invalid keyword"));
         }

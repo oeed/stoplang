@@ -9,5 +9,5 @@ pub struct Ast<'a> {
 }
 
 impl<'a> Ast<'a> {
-  pub fn new(tokens: &'a str) -> Self {}
+  // pub fn new(tokens: &'a str) -> Self {}
 }
