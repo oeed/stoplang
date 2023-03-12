@@ -1,9 +1,9 @@
 use crate::ast::{expression::Expression, statement::Statement};
 
-use super::{scope::Scope, stopstd::std_call, variable::Variable, Eval, RuntimeError, RuntimeResult};
+use super::{scope::ScopeStack, stopstd::std_call, variable::Variable, Eval, RuntimeError, RuntimeResult};
 
 impl<'a> Eval<'a> for Expression<'a> {
-  fn eval(&self, scope: &mut Scope<'a>) -> RuntimeResult<Variable<'a>> {
+  fn eval(&self, scope: &mut ScopeStack<'a>) -> RuntimeResult<Variable<'a>> {
     match self {
       Expression::Bool(bool) => Ok(Variable::Bool(*bool)),
       Expression::String(str) => Ok(Variable::String(str.to_string())),
@@ -24,14 +24,17 @@ impl<'a> Eval<'a> for Expression<'a> {
             received: arguments.len(),
           });
         }
-        let mut function_scope = Scope::new();
+        scope.push();
         for (i, provided) in arguments.iter().enumerate() {
           let expected = function.arguments[i];
-          function_scope.set(expected, provided.eval(scope)?);
+          let value = provided.eval(scope)?;
+          scope.set(expected, value);
         }
 
         // function.eval(&mut function_scope)
-        Statement::eval_block(&mut function_scope, &function.block)
+        let result = Statement::eval_block(scope, &function.block)?;
+        scope.pop();
+        Ok(result)
       }
     }
   }

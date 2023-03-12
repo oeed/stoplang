@@ -1,9 +1,9 @@
 use crate::ast::statement::{conditional::Conditional, Statement};
 
-use super::{scope::Scope, variable::Variable, Eval, RuntimeResult};
+use super::{scope::ScopeStack, variable::Variable, Eval, RuntimeResult};
 
 impl<'a> Eval<'a> for Statement<'a> {
-  fn eval(&self, scope: &mut Scope<'a>) -> RuntimeResult<Variable<'a>> {
+  fn eval(&self, scope: &mut ScopeStack<'a>) -> RuntimeResult<Variable<'a>> {
     match self {
       Statement::Conditional(conditional) => conditional.eval(scope),
       Statement::Expression(expression) => expression.eval(scope),
@@ -17,7 +17,7 @@ impl<'a> Eval<'a> for Statement<'a> {
 }
 
 impl<'a> Statement<'a> {
-  pub fn eval_block(scope: &mut Scope<'a>, block: &[Statement<'a>]) -> RuntimeResult<Variable<'a>> {
+  pub fn eval_block(scope: &mut ScopeStack<'a>, block: &[Statement<'a>]) -> RuntimeResult<Variable<'a>> {
     let mut statements = block.iter().rev();
     let last_statement = statements.next();
     for statement in statements.rev() {
@@ -33,7 +33,7 @@ impl<'a> Statement<'a> {
 }
 
 impl<'a> Eval<'a> for Conditional<'a> {
-  fn eval(&self, scope: &mut Scope<'a>) -> RuntimeResult<Variable<'a>> {
+  fn eval(&self, scope: &mut ScopeStack<'a>) -> RuntimeResult<Variable<'a>> {
     let condition = self.condition.eval(scope)?.try_into_bool()?;
     if condition {
       Statement::eval_block(scope, &self.true_block)

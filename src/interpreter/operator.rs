@@ -1,11 +1,11 @@
-use super::{scope::Scope, variable::Variable, RuntimeResult};
+use super::{scope::ScopeStack, variable::Variable, RuntimeResult};
 use crate::interpreter::Eval;
 use crate::{ast::expression::Expression, token::Operator};
 
 impl Operator {
   pub fn eval<'a>(
     &self,
-    scope: &mut Scope<'a>,
+    scope: &mut ScopeStack<'a>,
     left: &Expression<'a>,
     right: &Expression<'a>,
   ) -> RuntimeResult<Variable<'a>> {

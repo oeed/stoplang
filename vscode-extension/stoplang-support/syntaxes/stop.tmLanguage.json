@@ -3,6 +3,9 @@
   "name": "Stop",
   "patterns": [
     {
+      "include": "#comments"
+    },
+    {
       "include": "#keywords"
     },
     {
@@ -10,9 +13,6 @@
     },
     {
       "include": "#numbers"
-    },
-    {
-      "include": "#comments"
     },
     {
       "include": "#calls"

@@ -1,7 +1,7 @@
 use crate::ast::{statement::Statement, Ast};
 use thiserror::Error;
 
-use self::{scope::Scope, variable::Variable};
+use self::{scope::ScopeStack, variable::Variable};
 
 mod expression;
 mod operator;
@@ -28,11 +28,11 @@ pub enum RuntimeError {
 pub type RuntimeResult<T> = Result<T, RuntimeError>;
 
 pub fn interpret(ast: Ast<'_>) -> RuntimeResult<()> {
-  let mut scope = Scope::new();
+  let mut scope = ScopeStack::new();
   Statement::eval_block(&mut scope, &ast.statements)?;
   Ok(())
 }
 
 trait Eval<'a> {
-  fn eval(&self, scope: &mut Scope<'a>) -> RuntimeResult<Variable<'a>>;
+  fn eval(&self, scope: &mut ScopeStack<'a>) -> RuntimeResult<Variable<'a>>;
 }

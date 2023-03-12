@@ -1,7 +1,8 @@
-("there")say_hi
 
 {
   5
+  ("there")say_hi
+  (a)print
   ("it's false!")print
 } else
 {
