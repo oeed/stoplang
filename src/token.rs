@@ -1,9 +1,12 @@
-use crate::ast::identifier::Identifier;
+use crate::ast::{identifier::Identifier, Location};
 use thiserror::Error;
 
 #[derive(PartialEq, Eq, Error, Debug)]
-#[error("token error: {0}")]
-pub struct TokenError(String);
+#[error("token error: {error}")]
+pub struct TokenError {
+  error: String,
+  pub location: Location,
+}
 pub type TokenResult<T> = Result<T, TokenError>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -115,6 +118,12 @@ impl<'a> TokenStream<'a> {
     }
   }
 
+  pub fn location(&self) -> Location {
+    Location {
+      position: self.next_position,
+    }
+  }
+
   /// Peek at the next `n` character, if there are not `n` many characters left returns `None`
   fn peek_next_n(&self, n: usize) -> Option<&'a str> {
     self.next_position.and_then(|next_pos| {
@@ -195,9 +204,10 @@ impl<'a> TokenStream<'a> {
       let char = str.chars().nth(0).unwrap();
       if n == 1 {
         if !Identifier::is_valid_first_char(char) {
-          return Err(TokenError(format!(
-            "invalid first character '{char}' of identifier, must only be alphabetic or _"
-          )));
+          return Err(TokenError {
+            error: format!("invalid first character '{char}' of identifier, must only be alphabetic or _",),
+            location: self.location(),
+          });
         }
       } else if !Identifier::is_valid_char(char) {
         // end of identifier
@@ -208,9 +218,10 @@ impl<'a> TokenStream<'a> {
   }
 
   pub fn try_identifier(&mut self) -> TokenResult<Identifier<'a>> {
-    self
-      .try_identifier_opt()?
-      .ok_or_else(|| TokenError("missing identifier".to_string()))
+    self.try_identifier_opt()?.ok_or_else(|| TokenError {
+      error: "missing identifier".to_string(),
+      location: self.location(),
+    })
   }
 
   pub fn try_number_opt(&mut self) -> TokenResult<Option<f64>> {
@@ -226,9 +237,15 @@ impl<'a> TokenStream<'a> {
             continue;
           } else if char == '.' {
             if n == 1 {
-              return Err(TokenError("number cannot end in decimal".to_string()));
+              return Err(TokenError {
+                error: "number cannot end in decimal".to_string(),
+                location: self.location(),
+              });
             } else if had_decimal {
-              return Err(TokenError("invalid number, cannot have multiple decimals".to_string()));
+              return Err(TokenError {
+                error: "invalid number, cannot have multiple decimals".to_string(),
+                location: self.location(),
+              });
             } else {
               had_decimal = true;
             }
@@ -259,9 +276,10 @@ impl<'a> TokenStream<'a> {
       return Ok(None);
     }
     for n in 1.. {
-      let str = self
-        .peek_next_n(n)
-        .ok_or_else(|| TokenError("expected string, found nothing".to_string()))?;
+      let str = self.peek_next_n(n).ok_or_else(|| TokenError {
+        error: "expected string, found nothing".to_string(),
+        location: self.location(),
+      })?;
 
       // TODO: unsure what an unfinished string will do here
       let char = str.chars().nth(0).unwrap();
@@ -281,7 +299,10 @@ impl<'a> TokenStream<'a> {
       self.consume_next_n(str.len());
       Ok(str)
     } else {
-      Err(TokenError(format!("expected: {str}")))
+      Err(TokenError {
+        error: format!("expected: {str}"),
+        location: self.location(),
+      })
     }
   }
 
@@ -303,14 +324,20 @@ impl<'a> TokenStream<'a> {
         .and_then(|str| str.chars().nth(0))
       {
         if Identifier::is_valid_char(after_char) {
-          return Err(TokenError(format!("invalid keyword: {after_char}{}", keyword.str())));
+          return Err(TokenError {
+            error: format!("invalid keyword: {after_char}{}", keyword.str()),
+            location: self.location(),
+          });
         }
       }
 
       self.consume_next_n(keyword.str().len());
       Ok(keyword)
     } else {
-      Err(TokenError(format!("expected keyword '{}'", keyword.str())))
+      Err(TokenError {
+        error: format!("expected keyword '{}'", keyword.str()),
+        location: self.location(),
+      })
     }
   }
 }

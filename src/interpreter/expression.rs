@@ -1,33 +1,43 @@
-use crate::ast::{expression::Expression, statement::Statement};
+use crate::ast::{expression::Expression, statement::Statement, Location};
 
 use super::{scope::ScopeStack, stopstd::std_call, variable::Variable, Eval, RuntimeError, RuntimeResult};
 
 impl<'a> Eval<'a> for Expression<'a> {
-  fn eval(&self, scope: &mut ScopeStack<'a>) -> RuntimeResult<Variable<'a>> {
+  fn eval(&self, scope: &mut ScopeStack<'a>, _: Location) -> RuntimeResult<Variable<'a>> {
     match self {
-      Expression::Bool(bool) => Ok(Variable::Bool(*bool)),
-      Expression::String(str) => Ok(Variable::String(str.to_string())),
-      Expression::Number(num) => Ok(Variable::Number(*num)),
-      Expression::Identifier(name) => Ok(scope.get(name)?.clone()), // variables are always copied
-      Expression::Brackets(expr) => expr.eval(scope),
-      Expression::Operation { operator, left, right } => operator.eval(scope, left, right),
-      Expression::Call { function, arguments } => {
+      Expression::Bool(bool, _) => Ok(Variable::Bool(*bool)),
+      Expression::String(str, _) => Ok(Variable::String(str.to_string())),
+      Expression::Number(num, _) => Ok(Variable::Number(*num)),
+      Expression::Identifier(name, location) => Ok(scope.get(name, *location)?.clone()), // variables are always copied
+      Expression::Brackets(expr, location) => expr.eval(scope, *location),
+      Expression::Operation {
+        operator,
+        left,
+        right,
+        location,
+      } => operator.eval(scope, *location, left, right),
+      Expression::Call {
+        function,
+        arguments,
+        location,
+      } => {
         if let Some(std_value) = std_call(*function, scope, arguments)? {
           return Ok(std_value);
         }
 
-        let function = scope.get(function)?.try_into_function()?.clone();
+        let function = scope.get(function, *location)?.try_into_function(*location)?.clone();
         if arguments.len() != function.arguments.len() {
           return Err(RuntimeError::IncorrectArgumentCount {
             function_name: function.name.to_string(),
             expected: function.arguments.len(),
             received: arguments.len(),
+            location: *location,
           });
         }
         scope.push();
         for (i, provided) in arguments.iter().enumerate() {
           let expected = function.arguments[i];
-          let value = provided.eval(scope)?;
+          let value = provided.eval(scope, provided.location())?;
           scope.set(expected, value);
         }
 

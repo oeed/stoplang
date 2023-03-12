@@ -12,13 +12,24 @@ pub enum AstError {
   #[error(transparent)]
   TokenError(#[from] TokenError),
   #[error("missing expression")]
-  MissingExpression,
+  MissingExpression(Location),
   #[error("missing statement")]
-  MissingStatement,
+  MissingStatement(Location),
   #[error("missing identifier")]
-  MissingIdentifier,
+  MissingIdentifier(Location),
 }
 pub type AstResult<T> = Result<T, AstError>;
+
+impl AstError {
+  pub fn location(&self) -> Location {
+    match self {
+      AstError::TokenError(TokenError { location, .. })
+      | AstError::MissingExpression(location)
+      | AstError::MissingStatement(location)
+      | AstError::MissingIdentifier(location) => *location,
+    }
+  }
+}
 
 #[derive(Debug)]
 pub struct Ast<'a> {
@@ -37,5 +48,34 @@ impl<'a> Ast<'a> {
     }
 
     Ok(Ast { statements })
+  }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub struct Location {
+  /// `None` if end of file
+  pub position: Option<usize>,
+}
+
+impl Location {
+  pub fn new(position: Option<usize>) -> Self {
+    Location { position }
+  }
+
+  pub fn description(&self, file: &str) -> String {
+    if let Some(position) = self.position {
+      let mut n = 0;
+      for (l, line) in file.lines().enumerate() {
+        for (c, _) in line.chars().chain(std::iter::once('\n')).enumerate() {
+          n += 1; // increment 1 for line ending
+          if n == position {
+            return format!("line {}, col {}", l + 1, c + 1);
+          }
+        }
+      }
+      unreachable!()
+    } else {
+      String::from("end of file")
+    }
   }
 }

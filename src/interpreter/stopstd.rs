@@ -17,7 +17,7 @@ pub fn std_call<'a>(
 }
 
 fn eval_arguments<'a>(scope: &mut ScopeStack<'a>, arguments: &[Expression<'a>]) -> RuntimeResult<Vec<Variable<'a>>> {
-  arguments.iter().map(|expr| expr.eval(scope)).collect()
+  arguments.iter().map(|expr| expr.eval(scope, expr.location())).collect()
 }
 
 fn print(arguments: Vec<Variable<'_>>) -> Variable<'static> {

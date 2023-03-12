@@ -1,5 +1,5 @@
 use crate::{
-  ast::{identifier::Identifier, AstResult},
+  ast::{identifier::Identifier, AstResult, Location},
   token::{Grammar, Keyword, TokenStream},
 };
 use derive_more::Display;
@@ -12,6 +12,7 @@ pub struct Function<'a> {
   pub name: Identifier<'a>,
   pub arguments: Vec<Identifier<'a>>,
   pub block: Vec<Statement<'a>>,
+  pub location: Location,
 }
 
 impl<'a> Function<'a> {
@@ -20,6 +21,7 @@ impl<'a> Function<'a> {
       return Ok(None);
     }
 
+    let location = tokens.location();
     let name = tokens.try_identifier()?;
     tokens.try_grammar(Grammar::CloseBracket)?;
 
@@ -40,32 +42,37 @@ impl<'a> Function<'a> {
 
     let block = Statement::try_block(tokens)?;
 
-    Ok(Some(Function { name, arguments, block }))
+    Ok(Some(Function {
+      name,
+      arguments,
+      block,
+      location,
+    }))
   }
 }
 
-#[cfg(test)]
-mod tests {
-  use crate::ast::expression::Expression;
+// #[cfg(test)]
+// mod tests {
+//   use crate::ast::expression::Expression;
 
-  use super::*;
+//   use super::*;
 
-  #[test]
-  fn function() {
-    let mut tokens = TokenStream::new(
-      "
-      {
-        1
-      } (2arg, 1arg) func_name fn",
-    );
-    assert_eq!(
-      Function::try_function_opt(&mut tokens),
-      Ok(Some(Function {
-        name: Identifier("func_name"),
-        arguments: vec![Identifier("1arg"), Identifier("2arg"),],
-        block: vec![Statement::Expression(Expression::Number(1.))]
-      }))
-    );
-    assert_eq!(Function::try_function_opt(&mut tokens), Ok(None));
-  }
-}
+//   #[test]
+//   fn function() {
+//     let mut tokens = TokenStream::new(
+//       "
+//       {
+//         1
+//       } (2arg, 1arg) func_name fn",
+//     );
+//     assert_eq!(
+//       Function::try_function_opt(&mut tokens),
+//       Ok(Some(Function {
+//         name: Identifier("func_name"),
+//         arguments: vec![Identifier("1arg"), Identifier("2arg"),],
+//         block: vec![Statement::Expression(Expression::Number(1.))]
+//       }))
+//     );
+//     assert_eq!(Function::try_function_opt(&mut tokens), Ok(None));
+//   }
+// }

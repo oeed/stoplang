@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::ast::identifier::Identifier;
+use crate::ast::{identifier::Identifier, Location};
 
 use super::{variable::Variable, RuntimeError, RuntimeResult};
 
@@ -35,7 +35,7 @@ impl<'a> ScopeStack<'a> {
     ScopeStack(vec![Scope::new()])
   }
 
-  pub fn get(&self, name: &Identifier<'a>) -> RuntimeResult<&Variable<'a>> {
+  pub fn get(&self, name: &Identifier<'a>, location: Location) -> RuntimeResult<&Variable<'a>> {
     for scope in self.0.iter().rev() {
       if let Some(var) = scope.get(name) {
         return Ok(var);
@@ -44,10 +44,11 @@ impl<'a> ScopeStack<'a> {
 
     Err(RuntimeError::UnknownVariable {
       name: name.0.to_string(),
+      location,
     })
   }
 
-  pub fn get_mut(&mut self, name: &Identifier<'a>) -> RuntimeResult<&mut Variable<'a>> {
+  pub fn get_mut(&mut self, name: &Identifier<'a>, location: Location) -> RuntimeResult<&mut Variable<'a>> {
     for scope in self.0.iter_mut().rev() {
       if let Some(var) = scope.get_mut(name) {
         return Ok(var);
@@ -56,6 +57,7 @@ impl<'a> ScopeStack<'a> {
 
     Err(RuntimeError::UnknownVariable {
       name: name.0.to_string(),
+      location,
     })
   }
 
