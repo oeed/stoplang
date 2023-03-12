@@ -1,0 +1,24 @@
+
+((10)isPrime)print
+
+
+{
+  (n, i + 1)isPrimeInternal return
+
+  {
+    true return
+  } i * i > n if
+
+  {
+    false return
+  } i % n == 0 if
+
+  {
+    false return
+  } n <= 2 if  
+
+} (n, i)isPrimeInternal fn
+
+{
+  (n, 2)isPrimeInternal return
+} (n)isPrime fn

@@ -5,18 +5,24 @@ use crate::ast::{
 
 use super::{scope::ScopeStack, variable::Variable, Eval, RuntimeResult};
 
-impl<'a> Eval<'a> for Statement<'a> {
-  fn eval(&self, scope: &mut ScopeStack<'a>, location: Location) -> RuntimeResult<Variable<'a>> {
+impl<'a> Statement<'a> {
+  fn eval(&self, scope: &mut ScopeStack<'a>) -> RuntimeResult<StatementValue<'a>> {
     match self {
-      Statement::Conditional(conditional) => conditional.eval(scope, location),
-      Statement::Expression(expression) => expression.eval(scope, location),
+      Statement::Conditional(conditional) => conditional.eval(scope),
+      Statement::Expression(expression) => Ok(StatementValue::End(expression.eval(scope)?)),
       Statement::Function(function) => {
         scope.set(function.name, Variable::Function(function.clone()));
-        Ok(Variable::Nil)
+        Ok(StatementValue::End(Variable::Nil))
       }
-      Statement::Return(_) => todo!(),
+      // this path only happens if it's the last statement, so it's fine anyway
+      Statement::Return(expression) => Ok(StatementValue::Early(expression.eval(scope)?)),
     }
   }
+}
+
+pub enum StatementValue<'a> {
+  Early(Variable<'a>),
+  End(Variable<'a>),
 }
 
 impl<'a> Statement<'a> {
@@ -29,27 +35,30 @@ impl<'a> Statement<'a> {
     }
   }
 
-  pub fn eval_block(scope: &mut ScopeStack<'a>, block: &[Statement<'a>]) -> RuntimeResult<Variable<'a>> {
+  pub fn eval_block(scope: &mut ScopeStack<'a>, block: &[Statement<'a>]) -> RuntimeResult<StatementValue<'a>> {
     let mut statements = block.iter().rev();
     let last_statement = statements.next();
     for statement in statements.rev() {
-      statement.eval(scope, statement.location())?;
+      match statement {
+        Statement::Return(expression) => return Ok(StatementValue::Early(expression.eval(scope)?)),
+        statement => match statement.eval(scope)? {
+          StatementValue::Early(value) => return Ok(StatementValue::Early(value)),
+          _ => (),
+        },
+      }
     }
 
     if let Some(last_statement) = last_statement {
-      Ok(last_statement.eval(scope, last_statement.location())?)
+      Ok(last_statement.eval(scope)?)
     } else {
-      Ok(Variable::Nil)
+      Ok(StatementValue::End(Variable::Nil))
     }
   }
 }
 
-impl<'a> Eval<'a> for Conditional<'a> {
-  fn eval(&self, scope: &mut ScopeStack<'a>, _: Location) -> RuntimeResult<Variable<'a>> {
-    let condition = self
-      .condition
-      .eval(scope, self.condition.location())?
-      .try_into_bool(self.condition.location())?;
+impl<'a> Conditional<'a> {
+  fn eval(&self, scope: &mut ScopeStack<'a>) -> RuntimeResult<StatementValue<'a>> {
+    let condition = self.condition.eval(scope)?.try_into_bool(self.condition.location())?;
     if condition {
       Statement::eval_block(scope, &self.true_block)
     } else {

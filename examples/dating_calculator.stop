@@ -1,0 +1,14 @@
+((28)can_date)print
+("28 year old can date: ")print
+("")print
+((18)can_date)print
+("18 year old can date: ")print
+("")print
+((38)can_date)print
+("38 year old can date: ")print
+
+{
+
+  7 + (2 / age) return 
+  You can date someones who age is (age / 2) + 7 \\
+}(age) can_date fn

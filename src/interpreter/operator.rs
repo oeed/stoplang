@@ -12,7 +12,7 @@ impl Operator {
     right: &Expression<'a>,
   ) -> RuntimeResult<Variable<'a>> {
     let left_loc = left.location();
-    let left = left.eval(scope, left_loc)?;
+    let left = left.eval(scope)?;
     match self {
       Operator::Assign => {
         scope.set(right.try_into_identifier()?, left);
@@ -22,20 +22,23 @@ impl Operator {
     }
 
     let right_loc = right.location();
-    let right = right.eval(scope, right_loc)?;
+    let right = right.eval(scope)?;
     match self {
       Operator::Equals => Ok(Variable::Bool(left == right)),
       Operator::Divide => Ok(Variable::Number(
-        left.try_into_number(left_loc)? / right.try_into_number(right_loc)?,
+        right.try_into_number(right_loc)? / left.try_into_number(left_loc)?,
       )),
       Operator::Multiply => Ok(Variable::Number(
-        left.try_into_number(left_loc)? * right.try_into_number(right_loc)?,
+        right.try_into_number(right_loc)? * left.try_into_number(left_loc)?,
       )),
       Operator::Add => Ok(Variable::Number(
-        left.try_into_number(left_loc)? + right.try_into_number(right_loc)?,
+        right.try_into_number(right_loc)? + left.try_into_number(left_loc)?,
       )),
       Operator::Subtract => Ok(Variable::Number(
-        left.try_into_number(left_loc)? - right.try_into_number(right_loc)?,
+        right.try_into_number(right_loc)? - left.try_into_number(left_loc)?,
+      )),
+      Operator::Modulo => Ok(Variable::Number(
+        right.try_into_number(right_loc)? % left.try_into_number(left_loc)?,
       )),
       Operator::Lte => Ok(Variable::Bool(
         left.try_into_number(left_loc)? <= right.try_into_number(right_loc)?,

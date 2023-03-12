@@ -40,6 +40,7 @@ pub enum Operator {
   Multiply,
   Add,
   Subtract,
+  Modulo,
   Lte,
   Gte,
   Lt,
@@ -58,6 +59,7 @@ impl Operator {
       Multiply => "*",
       Add => "+",
       Subtract => "-",
+      Modulo => "%",
       Lte => "<=",
       Gte => ">=",
       Lt => "<",
@@ -71,7 +73,7 @@ impl Operator {
   pub fn operators() -> &'static [Operator] {
     use Operator::*;
     &[
-      Equals, Divide, Multiply, Add, Subtract, Lte, Gte, Lt, Gt, And, Or, Assign,
+      Equals, Divide, Multiply, Add, Subtract, Modulo, Lte, Gte, Lt, Gt, And, Or, Assign,
     ]
   }
 }

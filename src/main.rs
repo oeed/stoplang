@@ -1,3 +1,5 @@
+use std::env;
+
 use derive_more::From;
 use stoplang::{
   ast::{Ast, AstError},
@@ -19,7 +21,11 @@ fn run(code: &str) -> Result<(), LocatedError> {
 }
 
 fn main() {
-  let file: String = std::fs::read_to_string("examples/fib.stop").unwrap().parse().unwrap();
+  let mut args: Vec<String> = env::args().collect();
+  let file: String = std::fs::read_to_string(args.pop().expect("missing path"))
+    .unwrap()
+    .parse()
+    .unwrap();
   match run(&file) {
     Err(LocatedError::Ast(err)) => println!("syntax error at {}: {}", err.location().description(&file), err),
     Err(LocatedError::Runtime(err)) => println!("runtime error at {}: {}", err.location().description(&file), err),

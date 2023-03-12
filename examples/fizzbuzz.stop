@@ -1,0 +1,31 @@
+Write a program that prints the numbers from 1 to 100 and for multiples of '3' print “Fizz” instead of the number and for the multiples of '5' print “Buzz” \\
+
+(100)fizzbuzz
+
+{
+  (i + 1, n)fizzbuzz_internal
+  
+  {
+    false return
+    ("buzz")print
+  } 5 % i == 0 if
+
+  {
+    false return
+    ("fizz")print
+  } 3 % i == 0 if
+
+  {
+    false return
+    ("fizzbuzz")print
+  } 15 % i == 0 if
+
+  {
+    false return 
+  } i >= n if
+
+}(i, n) fizzbuzz_internal fn
+
+{
+  (1, n)fizzbuzz_internal return
+}(n) fizzbuzz fn

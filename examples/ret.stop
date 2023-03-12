@@ -1,0 +1,12 @@
+(a)print
+()go = a
+
+{
+  "end"
+  {
+    "early" return
+    ("do earlty")print
+  }true if
+
+}
+()go fn
