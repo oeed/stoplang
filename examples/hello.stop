@@ -1,12 +1,18 @@
 ("there")say_hi
 
 {
+  5
   ("it's false!")print
 } else
 {
+  10
   ("it's true")print
 }
 1 + 2 == 2 if
+
+(a)print
+a + 2 = a
+1 = a
 
 {
   ("hi")print
