@@ -1,4 +1,6 @@
-#[derive(Debug, PartialEq, Eq)]
+use derive_more::Display;
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Display)]
 pub struct Identifier<'a>(pub &'a str);
 
 impl<'a> Identifier<'a> {

@@ -1,0 +1,15 @@
+("there")say_hi
+
+{
+  ("it's false!")print
+} else
+{
+  ("it's true")print
+}
+1 + 2 == 2 if
+
+{
+  ("hi")print
+  (var)print
+}
+(var)say_hi fn

@@ -7,7 +7,7 @@ use super::{expression::Expression, AstError, AstResult};
 pub mod conditional;
 pub mod function;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Statement<'a> {
   Conditional(Conditional<'a>),
   Expression(Expression<'a>),

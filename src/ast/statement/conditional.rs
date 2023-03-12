@@ -5,7 +5,7 @@ use crate::{
 
 use super::Statement;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Conditional<'a> {
   // no else if for now to keep things simple
   pub condition: Expression<'a>,
@@ -20,9 +20,9 @@ impl<'a> Conditional<'a> {
     }
 
     let condition = Expression::try_expression(tokens)?;
-    let false_block = Statement::try_block(tokens)?;
+    let true_block = Statement::try_block(tokens)?;
     if tokens.try_keyword(Keyword::Else).is_ok() {
-      let true_block = Statement::try_block(tokens)?;
+      let false_block = Statement::try_block(tokens)?;
       Ok(Some(Conditional {
         condition,
         true_block,
@@ -31,8 +31,8 @@ impl<'a> Conditional<'a> {
     } else {
       Ok(Some(Conditional {
         condition,
-        true_block: Vec::new(),
-        false_block,
+        true_block,
+        false_block: Vec::new(),
       }))
     }
   }

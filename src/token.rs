@@ -43,7 +43,6 @@ pub enum Operator {
   Gt,
   And,
   Or,
-  Not,
   Assign,
 }
 
@@ -62,7 +61,6 @@ impl Operator {
       Gt => ">",
       And => "&&",
       Or => "||",
-      Not => "!",
       Assign => "=",
     }
   }
@@ -70,7 +68,7 @@ impl Operator {
   pub fn operators() -> &'static [Operator] {
     use Operator::*;
     &[
-      Equals, Divide, Multiply, Add, Subtract, Lte, Gte, Lt, Gt, And, Or, Not, Assign,
+      Equals, Divide, Multiply, Add, Subtract, Lte, Gte, Lt, Gt, And, Or, Assign,
     ]
   }
 }

@@ -1,8 +1,11 @@
-use crate::token::{Grammar, Keyword, Operator, TokenStream};
+use crate::{
+  interpreter::{RuntimeError, RuntimeResult},
+  token::{Grammar, Keyword, Operator, TokenStream},
+};
 
 use super::{identifier::Identifier, AstError, AstResult};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Expression<'a> {
   Bool(bool),
   String(&'a str), // TODO: given we want to reverse, maybe use owned?
@@ -76,6 +79,13 @@ impl<'a> Expression<'a> {
       })
     } else {
       Ok(right)
+    }
+  }
+
+  pub fn try_into_identifier(&self) -> RuntimeResult<Identifier<'a>> {
+    match self {
+      Expression::Identifier(identifier) => Ok(*identifier),
+      _ => Err(RuntimeError::InvalidExpression { expected: "identifier" }),
     }
   }
 }

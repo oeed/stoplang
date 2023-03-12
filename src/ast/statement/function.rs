@@ -2,10 +2,12 @@ use crate::{
   ast::{identifier::Identifier, AstResult},
   token::{Grammar, Keyword, TokenStream},
 };
+use derive_more::Display;
 
 use super::Statement;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Display)]
+#[display(fmt = "Function({})", name)]
 pub struct Function<'a> {
   pub name: Identifier<'a>,
   pub arguments: Vec<Identifier<'a>>,

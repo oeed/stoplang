@@ -1,8 +1,8 @@
-use stoplang::{ast::Ast, token::TokenStream};
+use stoplang::{ast::Ast, interpreter::interpret, token::TokenStream};
 
 fn main() {
-  let file: String = std::fs::read_to_string("examples/fib.stop").unwrap().parse().unwrap();
+  let file: String = std::fs::read_to_string("examples/hello.stop").unwrap().parse().unwrap();
   let mut tokens = TokenStream::new(&file);
   let ast = Ast::new(&mut tokens).unwrap();
-  println!("AST: {:#?}", ast)
+  interpret(ast).unwrap();
 }
