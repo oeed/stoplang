@@ -1,4 +1,5 @@
 use crate::ast::{identifier::Identifier, Location};
+use std::fmt;
 use thiserror::Error;
 
 #[derive(PartialEq, Eq, Error, Debug)]
@@ -17,6 +18,8 @@ pub enum Grammar {
   CloseCurly,
   DoubleQuote,
   Comma,
+  ListOpen,
+  ListClose,
 }
 
 impl Grammar {
@@ -29,6 +32,8 @@ impl Grammar {
       CloseCurly => "}",
       DoubleQuote => "\"",
       Comma => ",",
+      ListOpen => "[",
+      ListClose => "]",
     }
   }
 }
@@ -86,6 +91,13 @@ pub enum Keyword {
   True,
   False,
   Return,
+  While,
+}
+
+impl fmt::Display for Operator {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f, "{}", self.str())
+  }
 }
 
 impl Keyword {
@@ -98,6 +110,7 @@ impl Keyword {
       True => "true",
       False => "false",
       Return => "return",
+      While => "while",
     }
   }
 }

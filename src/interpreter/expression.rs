@@ -1,9 +1,11 @@
-use crate::ast::{expression::Expression, statement::Statement, Location};
-
-use super::{
-  scope::ScopeStack, statement::StatementValue, stopstd::std_call, variable::Variable, Eval, RuntimeError,
-  RuntimeResult,
+use crate::ast::{
+  expression::{self, Expression},
+  identifier,
+  statement::Statement,
+  Location,
 };
+
+use super::{scope::ScopeStack, statement::StatementValue, variable::Variable, Eval, RuntimeError, RuntimeResult};
 
 impl<'a> Expression<'a> {
   pub fn eval(&self, scope: &mut ScopeStack<'a>) -> RuntimeResult<Variable<'a>> {
@@ -24,31 +26,66 @@ impl<'a> Expression<'a> {
         arguments,
         location,
       } => {
-        if let Some(std_value) = std_call(*function, scope, arguments)? {
-          return Ok(std_value);
-        }
+        let variable = scope.get(function, *location)?.clone();
 
-        let function = scope.get(function, *location)?.try_into_function(*location)?.clone();
-        if arguments.len() != function.arguments.len() {
-          return Err(RuntimeError::IncorrectArgumentCount {
-            function_name: function.name.to_string(),
-            expected: function.arguments.len(),
-            received: arguments.len(),
+        match variable {
+          Variable::Function(function) => {
+            if arguments.len() != function.arguments.len() {
+              return Err(RuntimeError::IncorrectArgumentCount {
+                function_name: function.name.to_string(),
+                expected: function.arguments.len(),
+                received: arguments.len(),
+                location: *location,
+              });
+            }
+            scope.push();
+            for (i, provided) in arguments.iter().enumerate() {
+              let expected = function.arguments[i];
+              let value = provided.eval(scope)?;
+              scope.set(expected, value);
+            }
+
+            let result = match Statement::eval_block(scope, &function.block)? {
+              StatementValue::Early(value) | StatementValue::End(value) => value,
+            };
+            scope.pop();
+            Ok(result)
+          }
+          Variable::NativeFunction(native_fn) => {
+            let args = arguments
+              .iter()
+              .map(|expr| expr.eval(scope))
+              .collect::<RuntimeResult<Vec<_>>>()?;
+            Ok(native_fn(args))
+          }
+          _ => {
+            return Err(RuntimeError::InvalidType {
+              expected: "function",
+              location: *location,
+            })
+          }
+        }
+      }
+      Expression::List(expr, location) => {
+        let mut list = Vec::new();
+        for (value) in expr {
+          let variable = value.eval(scope)?;
+          list.push(variable);
+        }
+        Ok(Variable::List(list))
+      }
+      Expression::Index(identifier, expression, location) => {
+        // The expression must evaluate to a number
+        let idx = expression.eval(scope)?.try_into_number(*location)?;
+        let list = scope.get(identifier, *location)?.try_into_list(*location)?;
+        if idx < 0.0 || idx as usize >= list.len() {
+          return Err(RuntimeError::IndexOutOfBounds {
+            index: idx as usize,
+            length: list.len(),
             location: *location,
           });
         }
-        scope.push();
-        for (i, provided) in arguments.iter().enumerate() {
-          let expected = function.arguments[i];
-          let value = provided.eval(scope)?;
-          scope.set(expected, value);
-        }
-
-        let result = match Statement::eval_block(scope, &function.block)? {
-          StatementValue::Early(value) | StatementValue::End(value) => value,
-        };
-        scope.pop();
-        Ok(result)
+        Ok(list[idx as usize].clone())
       }
     }
   }

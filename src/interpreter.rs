@@ -7,7 +7,6 @@ mod expression;
 mod operator;
 mod scope;
 mod statement;
-mod stopstd;
 mod variable;
 
 #[derive(Error, Debug, PartialEq, Eq)]
@@ -25,6 +24,12 @@ pub enum RuntimeError {
     received: usize,
     location: Location,
   },
+  #[error("index out of bounds, index: {index}, length: {length}")]
+  IndexOutOfBounds {
+    index: usize,
+    length: usize,
+    location: Location,
+  },
 }
 pub type RuntimeResult<T> = Result<T, RuntimeError>;
 impl RuntimeError {
@@ -34,11 +39,17 @@ impl RuntimeError {
       | RuntimeError::InvalidType { location, .. }
       | RuntimeError::InvalidExpression { location, .. }
       | RuntimeError::IncorrectArgumentCount { location, .. } => *location,
+      RuntimeError::IndexOutOfBounds {
+        index,
+        length,
+        location,
+      } => *location,
     }
   }
 }
 
 pub fn interpret(ast: Ast<'_>) -> RuntimeResult<()> {
+  // ast.print();
   let mut scope = ScopeStack::new();
   Statement::eval_block(&mut scope, &ast.statements)?;
   Ok(())

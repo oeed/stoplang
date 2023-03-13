@@ -1,5 +1,5 @@
 use crate::{
-  ast::{identifier::Identifier, AstResult, Location},
+  ast::{expression::Expression, identifier::Identifier, AstResult, Location},
   token::{Grammar, Keyword, TokenStream},
 };
 use derive_more::Display;
@@ -48,6 +48,54 @@ impl<'a> Function<'a> {
       block,
       location,
     }))
+  }
+
+  pub fn print(&self, indent: usize) {
+    println!("{}Function: {}", " ".repeat(indent), self.name);
+    println!("{}Arguments:", " ".repeat(indent));
+    for argument in &self.arguments {
+      println!("{}{}", " ".repeat(indent + 2), argument);
+    }
+    println!("{}Block:", " ".repeat(indent));
+    for statement in &self.block {
+      statement.print(indent + 2);
+    }
+    println!("\n");
+  }
+}
+
+#[derive(Debug, PartialEq, Clone, Display)]
+#[display(fmt = "While")]
+pub struct While<'a> {
+  pub condition: Expression<'a>,
+  pub block: Vec<Statement<'a>>,
+  pub location: Location,
+}
+
+impl<'a> While<'a> {
+  pub fn try_while_opt(tokens: &mut TokenStream<'a>) -> AstResult<Option<Self>> {
+    if tokens.try_keyword(Keyword::While).is_err() {
+      return Ok(None);
+    }
+
+    let location = tokens.location();
+    let condition = Expression::try_expression(tokens)?;
+    let block = Statement::try_block(tokens)?;
+
+    Ok(Some(While {
+      condition,
+      block,
+      location,
+    }))
+  }
+
+  pub fn print(&self, indent: usize) {
+    println!("{}while", " ".repeat(indent));
+    self.condition.print(indent + 2);
+    println!("{}do", " ".repeat(indent));
+    for statement in &self.block {
+      statement.print(indent + 2);
+    }
   }
 }
 

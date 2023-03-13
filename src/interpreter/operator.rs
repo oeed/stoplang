@@ -1,5 +1,6 @@
+use super::RuntimeError;
 use super::{scope::ScopeStack, variable::Variable, RuntimeResult};
-use crate::ast::Location;
+use crate::ast::{identifier, Location};
 use crate::interpreter::Eval;
 use crate::{ast::expression::Expression, token::Operator};
 
@@ -13,11 +14,33 @@ impl Operator {
   ) -> RuntimeResult<Variable<'a>> {
     let left_loc = left.location();
     let left = left.eval(scope)?;
+
     match self {
-      Operator::Assign => {
-        scope.set(right.try_into_identifier()?, left);
-        return Ok(Variable::Nil);
-      }
+      Operator::Assign => match right {
+        Expression::Identifier(identifier, _) => {
+          scope.set(right.try_into_identifier()?, left);
+          return Ok(Variable::Nil);
+        }
+        Expression::Index(identifier, expression, _) => {
+          let location = right.location();
+          let idx = expression.eval(scope)?.try_into_number(location)?;
+          let list = scope.get(identifier, location)?.try_into_list(location)?;
+          if (idx < 0.0) || (idx as usize >= list.len()) {
+            return Err(RuntimeError::IndexOutOfBounds {
+              index: idx as usize,
+              length: list.len(),
+              location,
+            });
+          }
+          // this would be REALLY slow but I can't figure out how to get a mutable reference to the list
+          let mut clonedList = list.clone();
+          clonedList[idx as usize] = left;
+
+          scope.set(*identifier, Variable::List(clonedList));
+          return Ok(Variable::Nil);
+        }
+        _ => (),
+      },
       _ => (),
     }
 

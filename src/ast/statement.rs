@@ -1,6 +1,6 @@
 use crate::token::{Grammar, Keyword, TokenStream};
 
-use self::{conditional::Conditional, function::Function};
+use self::{conditional::Conditional, function::Function, function::While};
 
 use super::{expression::Expression, AstError, AstResult};
 
@@ -13,6 +13,7 @@ pub enum Statement<'a> {
   Expression(Expression<'a>),
   Function(Function<'a>),
   Return(Expression<'a>),
+  While(While<'a>),
 }
 
 impl<'a> Statement<'a> {
@@ -24,6 +25,8 @@ impl<'a> Statement<'a> {
 
     let statement = if tokens.try_keyword(Keyword::Return).is_ok() {
       Statement::Return(Expression::try_expression(tokens)?)
+    } else if let Some(while_loop) = While::try_while_opt(tokens)? {
+      Statement::While(while_loop)
     } else if let Some(conditional) = Conditional::try_conditional_opt(tokens)? {
       Statement::Conditional(conditional)
     } else if let Some(function) = Function::try_function_opt(tokens)? {
@@ -50,6 +53,19 @@ impl<'a> Statement<'a> {
     }
 
     Ok(statements)
+  }
+
+  pub fn print(&self, indent: usize) {
+    match self {
+      Statement::Conditional(conditional) => conditional.print(indent),
+      Statement::Expression(expression) => expression.print(indent),
+      Statement::Function(function) => function.print(indent),
+      Statement::While(while_loop) => while_loop.print(indent),
+      Statement::Return(expression) => {
+        println!("{}return", " ".repeat(indent));
+        expression.print(indent + 2);
+      }
+    }
   }
 }
 

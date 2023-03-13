@@ -3,13 +3,18 @@ use crate::{
   token::{Grammar, Keyword, Operator, TokenStream},
 };
 
-use super::{identifier::Identifier, AstError, AstResult, Location};
+use super::{
+  identifier::{self, Identifier},
+  AstError, AstResult, Location,
+};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expression<'a> {
   Bool(bool, Location),
   String(&'a str, Location), // TODO: given we want to reverse, maybe use owned?
   Number(f64, Location),
+  List(Vec<Expression<'a>>, Location),
+  Index(Identifier<'a>, Box<Expression<'a>>, Location),
   Operation {
     operator: Operator,
     left: Box<Expression<'a>>,
@@ -40,6 +45,19 @@ impl<'a> Expression<'a> {
       let expression = Expression::try_expression(tokens)?;
       tokens.try_grammar(Grammar::OpenBracket)?;
       Expression::Brackets(Box::new(expression), tokens.location())
+    } else if tokens.try_grammar(Grammar::ListClose).is_ok() {
+      let mut expressions = Vec::new();
+      loop {
+        if tokens.try_grammar(Grammar::ListOpen).is_ok() {
+          break;
+        }
+        expressions.push(Expression::try_expression(tokens)?);
+        if tokens.try_grammar(Grammar::Comma).is_err() {
+          tokens.try_grammar(Grammar::ListOpen)?;
+          break;
+        }
+      }
+      Expression::List(expressions, tokens.location())
     } else if let Some(identifier) = tokens.try_identifier_opt()? {
       // see if there are brackets, indicating a function call
       if tokens.try_grammar(Grammar::CloseBracket).is_ok() {
@@ -62,6 +80,11 @@ impl<'a> Expression<'a> {
           arguments,
           location: tokens.location(),
         }
+      } else if tokens.try_grammar(Grammar::ListClose).is_ok() {
+        // this is an index
+        let index = Expression::try_expression(tokens)?;
+        tokens.try_grammar(Grammar::ListOpen)?;
+        Expression::Index(identifier, Box::new(index), tokens.location())
       } else {
         Expression::Identifier(identifier, tokens.location())
       }
@@ -95,6 +118,8 @@ impl<'a> Expression<'a> {
       | Expression::Number(_, location)
       | Expression::Operation { location, .. }
       | Expression::Call { location, .. } => *location,
+      Expression::List(_, location) => *location,
+      Expression::Index(_, _, location) => *location,
     }
   }
 
@@ -105,6 +130,45 @@ impl<'a> Expression<'a> {
         expected: "identifier",
         location: self.location(),
       }),
+    }
+  }
+
+  pub fn print(&self, indent: usize) {
+    let indent = " ".repeat(indent);
+    match self {
+      Expression::Bool(value, _) => println!("{}{}", indent, value),
+      Expression::String(value, _) => println!("{}{}", indent, value),
+      Expression::Number(value, _) => println!("{}{}", indent, value),
+      Expression::List(expressions, _) => {
+        println!("{}{}", indent, "[]");
+        for expression in expressions {
+          expression.print(indent.len() + 2);
+        }
+      }
+      Expression::Operation {
+        operator, left, right, ..
+      } => {
+        println!("{}{}", indent, operator);
+        left.print(indent.len() + 2);
+        right.print(indent.len() + 2);
+      }
+      Expression::Call {
+        function, arguments, ..
+      } => {
+        println!("{}{}", indent, function);
+        for argument in arguments {
+          argument.print(indent.len() + 2);
+        }
+      }
+      Expression::Identifier(identifier, _) => println!("{}{}", indent, identifier),
+      Expression::Brackets(expression, _) => {
+        println!("{}{}", indent, "()");
+        expression.print(indent.len() + 2);
+      }
+      Expression::Index(identifier, index, _) => {
+        println!("{}[{}]", indent, identifier);
+        index.print(indent.len() + 2);
+      }
     }
   }
 }
