@@ -39,6 +39,7 @@ impl RuntimeError {
 }
 
 pub fn interpret(ast: Ast<'_>) -> RuntimeResult<()> {
+  // ast.print();
   let mut scope = ScopeStack::new();
   Statement::eval_block(&mut scope, &ast.statements)?;
   Ok(())

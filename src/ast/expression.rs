@@ -107,6 +107,40 @@ impl<'a> Expression<'a> {
       }),
     }
   }
+
+  pub fn print(&self, indent: usize) {
+    let indent = " ".repeat(indent);
+    match self {
+      Expression::Bool(value, _) => println!("{}{}", indent, value),
+      Expression::String(value, _) => println!("{}{}", indent, value),
+      Expression::Number(value, _) => println!("{}{}", indent, value),
+      Expression::Operation {
+        operator,
+        left,
+        right,
+        ..
+      } => {
+        println!("{}{}", indent, operator);
+        left.print(indent.len() + 2);
+        right.print(indent.len() + 2);
+      }
+      Expression::Call {
+        function,
+        arguments,
+        ..
+      } => {
+        println!("{}{}", indent, function);
+        for argument in arguments {
+          argument.print(indent.len() + 2);
+        }
+      }
+      Expression::Identifier(identifier, _) => println!("{}{}", indent, identifier),
+      Expression::Brackets(expression, _) => {
+        println!("{}{}", indent, "()");
+        expression.print(indent.len() + 2);
+      }
+    }
+  }
 }
 
 // #[cfg(test)]

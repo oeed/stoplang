@@ -46,8 +46,13 @@ impl<'a> Ast<'a> {
         break;
       }
     }
-
     Ok(Ast { statements })
+  }
+
+  pub fn print(&self) {
+    for statement in &self.statements {
+      statement.print(0);
+    }
   }
 }
 

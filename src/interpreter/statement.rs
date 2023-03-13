@@ -14,6 +14,19 @@ impl<'a> Statement<'a> {
         scope.set(function.name, Variable::Function(function.clone()));
         Ok(StatementValue::End(Variable::Nil))
       }
+      Statement::While(while_loop) => {
+        while while_loop
+          .condition
+          .eval(scope)?
+          .try_into_bool(while_loop.condition.location())?
+        {
+          match Statement::eval_block(scope, &while_loop.block)? {
+            StatementValue::Early(value) => return Ok(StatementValue::Early(value)),
+            _ => (),
+          }
+        }
+        Ok(StatementValue::End(Variable::Nil))
+      }
       // this path only happens if it's the last statement, so it's fine anyway
       Statement::Return(expression) => Ok(StatementValue::Early(expression.eval(scope)?)),
     }
@@ -31,6 +44,7 @@ impl<'a> Statement<'a> {
       Statement::Conditional(conditional) => conditional.location,
       Statement::Expression(expression) => expression.location(),
       Statement::Function(function) => function.location,
+      Statement::While(while_loop) => while_loop.location,
       Statement::Return(ret) => ret.location(),
     }
   }

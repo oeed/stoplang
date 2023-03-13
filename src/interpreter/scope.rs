@@ -26,6 +26,12 @@ impl<'a> Scope<'a> {
   fn set(&mut self, name: Identifier<'a>, variable: Variable<'a>) {
     self.variables.insert(name, variable);
   }
+
+  fn print(&self) {
+    for (name, variable) in &self.variables {
+      println!("{}", name.0);
+    }
+  }
 }
 
 pub struct ScopeStack<'a>(Vec<Scope<'a>>);
@@ -71,5 +77,14 @@ impl<'a> ScopeStack<'a> {
 
   pub fn pop(&mut self) {
     self.0.pop();
+  }
+
+  pub fn print(&self) {
+    for scope in &self.0 {
+      println!("[SCOPE START]");
+      scope.print();
+      println!("[SCOPE END]");
+      println!("");
+    }
   }
 }
