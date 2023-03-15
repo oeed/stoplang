@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use super::{identifier::Identifier, AstError, AstResult, Location};
 use crate::{
   interpreter::{RuntimeError, RuntimeResult},
@@ -7,10 +9,10 @@ use crate::{
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expression<'a> {
   Bool(bool, Location),
-  String(&'a str, Location), // TODO: given we want to reverse, maybe use owned?
+  String(&'a str, Location),
   Number(f64, Location),
   List(Vec<Expression<'a>>, Location),
-  Map(Vec<(String, Expression<'a>)>, Location),
+  Map(HashMap<String, Expression<'a>>, Location),
   Index(Identifier<'a>, Vec<Expression<'a>>, Location),
   Operation {
     operator: Operator,
@@ -43,7 +45,7 @@ impl<'a> Expression<'a> {
       tokens.try_grammar(Grammar::OpenBracket)?;
       Expression::Brackets(Box::new(expression), tokens.location())
     } else if tokens.try_grammar(Grammar::CloseCurly).is_ok() {
-      let mut expressions = Vec::new();
+      let mut map = HashMap::new();
       loop {
         if tokens.try_grammar(Grammar::OpenCurly).is_ok() {
           break;
@@ -53,15 +55,19 @@ impl<'a> Expression<'a> {
         } else {
           tokens.try_identifier()?.0.to_owned()
         };
+        if map.contains_key(&key) {
+          return Err(AstError::DuplicateKey(tokens.location()));
+        }
         tokens.try_grammar(Grammar::Colon)?;
-        let expression = Expression::try_expression(tokens)?;
-        expressions.push((key, expression));
+
+        let value = Expression::try_expression(tokens)?;
+        map.insert(key, value);
         if tokens.try_grammar(Grammar::Comma).is_err() {
           tokens.try_grammar(Grammar::OpenCurly)?;
           break;
         }
       }
-      Expression::Map(expressions, tokens.location())
+      Expression::Map(map, tokens.location())
     } else if tokens.try_grammar(Grammar::ListClose).is_ok() {
       let mut expressions = Vec::new();
       loop {

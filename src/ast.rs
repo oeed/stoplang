@@ -17,6 +17,8 @@ pub enum AstError {
   MissingStatement(Location),
   #[error("missing identifier")]
   MissingIdentifier(Location),
+  #[error("duplicate key")]
+  DuplicateKey(Location),
 }
 pub type AstResult<T> = Result<T, AstError>;
 
@@ -26,7 +28,8 @@ impl AstError {
       AstError::TokenError(TokenError { location, .. })
       | AstError::MissingExpression(location)
       | AstError::MissingStatement(location)
-      | AstError::MissingIdentifier(location) => *location,
+      | AstError::MissingIdentifier(location)
+      | AstError::DuplicateKey(location) => *location,
     }
   }
 }
@@ -42,8 +45,7 @@ impl<'a> Ast<'a> {
     loop {
       if let Some(statement) = Statement::try_statement_opt(tokens)? {
         statements.push(statement)
-      }
-      else {
+      } else {
         break;
       }
     }
@@ -74,8 +76,7 @@ impl Location {
         }
       }
       format!("line {}, col {}", 0, 0)
-    }
-    else {
+    } else {
       String::from("end of file")
     }
   }
