@@ -72,14 +72,17 @@ impl<'a> Expression<'a> {
         location,
       } => {
         // Index expressions are only valid for lists and maps
-        let mut variable = scope.get(indexed, *location)?.clone();
+        let index_values: Vec<_> = indices
+          .iter()
+          .map(|index| index.eval(scope))
+          .collect::<Result<_, _>>()?;
+        let mut variable = scope.get(indexed, *location)?;
 
-        for value in indices {
-          let idx = value.eval(scope)?;
-          let result = variable.get_at_index(idx, *location)?;
+        for index in index_values {
+          let result = variable.get_at_index(index, *location)?;
           variable = result;
         }
-        Ok(variable)
+        Ok(variable.clone())
       }
       Expression::Map(values, ..) => {
         let mut map = std::collections::HashMap::new();

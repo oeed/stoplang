@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use super::{RuntimeError, RuntimeResult};
 use crate::ast::{statement::function::Function, Location};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Variable<'a> {
   String(String),
   Number(f64),
@@ -104,28 +104,22 @@ impl<'a> Variable<'a> {
     }
   }
 
-  pub fn get_at_index(&self, idx: Variable<'a>, location: Location) -> RuntimeResult<Variable<'a>> {
+  pub fn get_at_index(&self, index: Variable<'a>, location: Location) -> RuntimeResult<&Variable<'a>> {
     match self {
       Variable::List(list) => {
-        let idx = idx.try_into_number(location)?;
-        if idx < 0.0 || idx as usize >= list.len() {
-          return Err(RuntimeError::IndexOutOfBounds {
-            index: idx as usize,
-            length: list.len(),
-            location: location,
-          });
-        }
-        Ok(list[idx as usize].clone())
+        let index: usize = index.try_into_number(location)? as usize;
+        list.get(index).ok_or(RuntimeError::IndexOutOfBounds {
+          index,
+          length: list.len(),
+          location: location,
+        })
       }
       Variable::Map(values) => {
-        let key = idx.try_into_str(location)?;
-        match values.get(key) {
-          Some(value) => Ok(value.clone()),
-          None => Err(RuntimeError::KeyNotFound {
-            key: idx.to_string(),
-            location: location,
-          }),
-        }
+        let key = index.try_into_str(location)?;
+        values.get(key).ok_or_else(|| RuntimeError::KeyNotFound {
+          key: key.to_owned(),
+          location: location,
+        })
       }
       _ => Err(RuntimeError::InvalidType {
         expected: "list or map",
@@ -134,32 +128,49 @@ impl<'a> Variable<'a> {
     }
   }
 
-  pub fn set_at_index(
-    &mut self,
-    idx: Variable<'a>,
-    value: Variable<'a>,
-    location: Location,
-  ) -> RuntimeResult<Variable<'a>> {
+  pub fn get_at_index_mut(&mut self, index: Variable<'a>, location: Location) -> RuntimeResult<&mut Variable<'a>> {
     match self {
       Variable::List(list) => {
-        let idx = idx.try_into_number(location)?;
-        if idx < 0.0 || idx as usize >= list.len() {
+        let length = list.len();
+        let index: usize = index.try_into_number(location)? as usize;
+        list.get_mut(index).ok_or(RuntimeError::IndexOutOfBounds {
+          index,
+          length,
+          location: location,
+        })
+      }
+      Variable::Map(values) => {
+        let key = index.try_into_str(location)?;
+        values.get_mut(key).ok_or_else(|| RuntimeError::KeyNotFound {
+          key: key.to_owned(),
+          location: location,
+        })
+      }
+      _ => Err(RuntimeError::InvalidType {
+        expected: "list or map",
+        location: location,
+      }),
+    }
+  }
+
+  pub fn set_at_index(&mut self, index: Variable<'a>, value: Variable<'a>, location: Location) -> RuntimeResult<()> {
+    match self {
+      Variable::List(list) => {
+        let index = index.try_into_number(location)? as usize;
+        if index >= list.len() {
           return Err(RuntimeError::IndexOutOfBounds {
-            index: idx as usize,
+            index: index as usize,
             length: list.len(),
             location: location,
           });
         }
-        let mut cloned = list.clone();
-        cloned[idx as usize] = value;
-        Ok(Variable::List(cloned))
+        list[index as usize] = value;
+        Ok(())
       }
       Variable::Map(map) => {
-        let key = idx.try_into_str(location)?;
-        let mut cloned = map.clone();
-        cloned.insert(key.to_owned(), value);
-
-        Ok(Variable::Map(cloned))
+        let key = index.try_into_str(location)?;
+        map.insert(key.to_owned(), value);
+        Ok(())
       }
       _ => Err(RuntimeError::InvalidType {
         expected: "list or map",

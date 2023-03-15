@@ -1,4 +1,4 @@
-use super::{scope::ScopeStack, variable::Variable, RuntimeError, RuntimeResult};
+use super::{scope::ScopeStack, variable::Variable, RuntimeResult};
 use crate::{
   ast::{expression::Expression, Location},
   token::Operator,
@@ -27,18 +27,23 @@ impl Operator {
           // nested map/list structure
 
           // Therefore the only solution would be to recursively clone the entire list/map hierarchy
-
-          if indices.len() != 1 {
-            return Err(RuntimeError::InvalidAssignment {
-              location: right.location(),
-            });
-          }
+          assert!(indices.len() > 0);
+          let index_values: Vec<_> = indices
+            .iter()
+            .map(|index| index.eval(scope))
+            .collect::<Result<_, _>>()?;
 
           let location = right.location();
-          let mut variable = scope.get(indexed, location)?.clone();
-          let idx = indices[0].eval(scope)?;
-          variable.set_at_index(idx, left, right.location())?;
-          scope.set(*indexed, variable);
+          let mut indexed = scope.get_mut(indexed, location)?;
+          for (i, index) in index_values.into_iter().enumerate() {
+            if i == indices.len() - 1 {
+              indexed.set_at_index(index, left.clone(), right.location())?;
+            } else {
+              // only traverse the non-final index
+              indexed = indexed.get_at_index_mut(index, location)?;
+            }
+          }
+
           return Ok(Variable::Nil);
         }
         _ => (),
