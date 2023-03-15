@@ -58,12 +58,10 @@ impl<'a> Expression<'a> {
               .collect::<RuntimeResult<Vec<_>>>()?;
             Ok(native_fn(args))
           }
-          _ => {
-            return Err(RuntimeError::InvalidType {
-              expected: "function",
-              location: *location,
-            })
-          }
+          _ => Err(RuntimeError::InvalidType {
+            expected: "function",
+            location: *location,
+          }),
         }
       }
       Expression::List(expr, location) => {

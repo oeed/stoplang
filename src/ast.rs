@@ -72,7 +72,7 @@ impl Location {
           }
         }
       }
-      return format!("line {}, col {}", 0, 0);
+      format!("line {}, col {}", 0, 0)
     } else {
       String::from("end of file")
     }

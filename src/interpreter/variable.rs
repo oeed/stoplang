@@ -148,12 +148,10 @@ impl<'a> Variable<'a> {
           }),
         }
       }
-      _ => {
-        return Err(RuntimeError::InvalidType {
-          expected: "list or map",
-          location: location,
-        })
-      }
+      _ => Err(RuntimeError::InvalidType {
+        expected: "list or map",
+        location: location,
+      }),
     }
   }
 
@@ -186,12 +184,10 @@ impl<'a> Variable<'a> {
 
         Ok(Variable::Map(cloned))
       }
-      _ => {
-        return Err(RuntimeError::InvalidType {
-          expected: "list or map",
-          location: location,
-        })
-      }
+      _ => Err(RuntimeError::InvalidType {
+        expected: "list or map",
+        location: location,
+      }),
     }
   }
 }
