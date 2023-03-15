@@ -20,8 +20,8 @@ pub enum Grammar {
   CloseCurly,
   DoubleQuote,
   Comma,
-  ListOpen,
-  ListClose,
+  SquareOpen,
+  SquareClose,
   Colon,
 }
 
@@ -35,8 +35,8 @@ impl Grammar {
       CloseCurly => "}",
       DoubleQuote => "\"",
       Comma => ",",
-      ListOpen => "[",
-      ListClose => "]",
+      SquareOpen => "[",
+      SquareClose => "]",
       Colon => ":",
     }
   }

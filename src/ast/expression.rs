@@ -72,15 +72,15 @@ impl<'a> Expression<'a> {
         }
       }
       Expression::Map(map, tokens.location())
-    } else if tokens.try_grammar(Grammar::ListClose).is_ok() {
+    } else if tokens.try_grammar(Grammar::SquareClose).is_ok() {
       let mut expressions = Vec::new();
       loop {
-        if tokens.try_grammar(Grammar::ListOpen).is_ok() {
+        if tokens.try_grammar(Grammar::SquareOpen).is_ok() {
           break;
         }
         expressions.push(Expression::try_expression(tokens)?);
         if tokens.try_grammar(Grammar::Comma).is_err() {
-          tokens.try_grammar(Grammar::ListOpen)?;
+          tokens.try_grammar(Grammar::SquareOpen)?;
           break;
         }
       }
@@ -107,15 +107,15 @@ impl<'a> Expression<'a> {
           arguments,
           location: tokens.location(),
         }
-      } else if tokens.try_grammar(Grammar::ListClose).is_ok() {
+      } else if tokens.try_grammar(Grammar::SquareClose).is_ok() {
         // support multiple indexes ie a[0][1]
         let mut indices = Vec::new();
         indices.push(Expression::try_expression(tokens)?);
 
         loop {
-          tokens.try_grammar(Grammar::ListOpen)?;
+          tokens.try_grammar(Grammar::SquareOpen)?;
 
-          if tokens.try_grammar(Grammar::ListClose).is_err() {
+          if tokens.try_grammar(Grammar::SquareClose).is_err() {
             break;
           }
           indices.push(Expression::try_expression(tokens)?);
