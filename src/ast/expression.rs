@@ -10,8 +10,8 @@ pub enum Expression<'a> {
   String(&'a str, Location), // TODO: given we want to reverse, maybe use owned?
   Number(f64, Location),
   List(Vec<Expression<'a>>, Location),
-  Map(Vec<(Identifier, Expression<'a>)>, Location),
-  Index(Identifier, Vec<Expression<'a>>, Location),
+  Map(Vec<(String, Expression<'a>)>, Location),
+  Index(Identifier<'a>, Vec<Expression<'a>>, Location),
   Operation {
     operator: Operator,
     left: Box<Expression<'a>>,
@@ -19,11 +19,11 @@ pub enum Expression<'a> {
     location: Location,
   },
   Call {
-    function: Identifier,
+    function: Identifier<'a>,
     arguments: Vec<Expression<'a>>,
     location: Location,
   },
-  Identifier(Identifier, Location),
+  Identifier(Identifier<'a>, Location),
   Brackets(Box<Expression<'a>>, Location),
 }
 
@@ -48,10 +48,14 @@ impl<'a> Expression<'a> {
         if tokens.try_grammar(Grammar::OpenCurly).is_ok() {
           break;
         }
-        let identifier = tokens.try_identifier()?;
+        let key = if let Some(string) = tokens.try_string_opt()? {
+          string.to_owned()
+        } else {
+          tokens.try_identifier()?.0.to_owned()
+        };
         tokens.try_grammar(Grammar::Colon)?;
         let expression = Expression::try_expression(tokens)?;
-        expressions.push((identifier, expression));
+        expressions.push((key, expression));
         if tokens.try_grammar(Grammar::Comma).is_err() {
           tokens.try_grammar(Grammar::OpenCurly)?;
           break;
@@ -146,7 +150,7 @@ impl<'a> Expression<'a> {
     }
   }
 
-  pub fn try_into_identifier(&self) -> RuntimeResult<Identifier> {
+  pub fn try_into_identifier(&self) -> RuntimeResult<Identifier<'a>> {
     match self {
       Expression::Identifier(identifier, _) => Ok(identifier.clone()),
       _ => Err(RuntimeError::InvalidExpression {

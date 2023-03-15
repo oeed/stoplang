@@ -1,11 +1,7 @@
 use std::collections::HashMap;
 
 use super::{RuntimeError, RuntimeResult};
-use crate::ast::{
-  identifier::{self, Identifier},
-  statement::function::Function,
-  Location,
-};
+use crate::ast::{statement::function::Function, Location};
 
 #[derive(Clone)]
 pub enum Variable<'a> {
@@ -15,7 +11,7 @@ pub enum Variable<'a> {
   Function(Function<'a>),
   NativeFunction(fn(Vec<Variable<'a>>) -> Variable<'a>),
   List(Vec<Variable<'a>>),
-  Map(HashMap<Identifier, Variable<'a>>),
+  Map(HashMap<String, Variable<'a>>),
   Nil,
 }
 
@@ -108,20 +104,7 @@ impl<'a> Variable<'a> {
     }
   }
 
-  pub fn try_into_identifier(&self, location: Location) -> RuntimeResult<Identifier> {
-    match self {
-      Variable::String(string) => {
-        let identifier = identifier::Identifier(string.clone());
-        Ok(identifier)
-      }
-      _ => Err(RuntimeError::InvalidType {
-        expected: "string",
-        location,
-      }),
-    }
-  }
-
-  pub fn get_at_index(&self, idx: Variable, location: Location) -> RuntimeResult<Variable<'a>> {
+  pub fn get_at_index(&self, idx: Variable<'a>, location: Location) -> RuntimeResult<Variable<'a>> {
     match self {
       Variable::List(list) => {
         let idx = idx.try_into_number(location)?;
@@ -136,8 +119,7 @@ impl<'a> Variable<'a> {
       }
       Variable::Map(values) => {
         let key = idx.try_into_str(location)?;
-        let identifier = identifier::Identifier(String::from(key));
-        match values.get(&identifier) {
+        match values.get(key) {
           Some(value) => Ok(value.clone()),
           None => Err(RuntimeError::KeyNotFound {
             key: idx.to_string(),
@@ -174,10 +156,8 @@ impl<'a> Variable<'a> {
       }
       Variable::Map(map) => {
         let key = idx.try_into_str(location)?;
-        let identifier = identifier::Identifier(String::from(key));
-
         let mut cloned = map.clone();
-        cloned.insert(identifier, value);
+        cloned.insert(key.to_owned(), value);
 
         Ok(Variable::Map(cloned))
       }

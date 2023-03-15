@@ -9,8 +9,8 @@ use crate::{
 #[derive(Debug, PartialEq, Clone, Display)]
 #[display(fmt = "Function({})", name)]
 pub struct Function<'a> {
-  pub name: Identifier,
-  pub arguments: Vec<Identifier>,
+  pub name: Identifier<'a>,
+  pub arguments: Vec<Identifier<'a>>,
   pub block: Vec<Statement<'a>>,
   pub location: Location,
 }
