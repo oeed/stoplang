@@ -49,19 +49,6 @@ impl<'a> Function<'a> {
       location,
     }))
   }
-
-  pub fn print(&self, indent: usize) {
-    println!("{}Function: {}", " ".repeat(indent), self.name);
-    println!("{}Arguments:", " ".repeat(indent));
-    for argument in &self.arguments {
-      println!("{}{}", " ".repeat(indent + 2), argument);
-    }
-    println!("{}Block:", " ".repeat(indent));
-    for statement in &self.block {
-      statement.print(indent + 2);
-    }
-    println!("\n");
-  }
 }
 
 #[derive(Debug, PartialEq, Clone, Display)]
@@ -87,15 +74,6 @@ impl<'a> While<'a> {
       block,
       location,
     }))
-  }
-
-  pub fn print(&self, indent: usize) {
-    println!("{}while", " ".repeat(indent));
-    self.condition.print(indent + 2);
-    println!("{}do", " ".repeat(indent));
-    for statement in &self.block {
-      statement.print(indent + 2);
-    }
   }
 }
 

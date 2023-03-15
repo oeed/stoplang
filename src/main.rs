@@ -16,7 +16,6 @@ enum LocatedError {
 fn run(code: &str) -> Result<(), LocatedError> {
   let mut tokens = TokenStream::new(code);
   let ast = Ast::new(&mut tokens)?;
-  ast.print();
   interpret(ast)?;
   Ok(())
 }

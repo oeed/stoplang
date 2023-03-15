@@ -54,19 +54,6 @@ impl<'a> Statement<'a> {
 
     Ok(statements)
   }
-
-  pub fn print(&self, indent: usize) {
-    match self {
-      Statement::Conditional(conditional) => conditional.print(indent),
-      Statement::Expression(expression) => expression.print(indent),
-      Statement::Function(function) => function.print(indent),
-      Statement::While(while_loop) => while_loop.print(indent),
-      Statement::Return(expression) => {
-        println!("{}return", " ".repeat(indent));
-        expression.print(indent + 2);
-      }
-    }
-  }
 }
 
 // #[cfg(test)]

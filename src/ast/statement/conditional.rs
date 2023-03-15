@@ -40,21 +40,6 @@ impl<'a> Conditional<'a> {
       }))
     }
   }
-
-  pub fn print(&self, indent: usize) {
-    println!("{}if", " ".repeat(indent));
-    self.condition.print(indent + 2);
-    println!("{}then", " ".repeat(indent));
-    for statement in &self.true_block {
-      statement.print(indent + 2);
-    }
-    if !self.false_block.is_empty() {
-      println!("{}else", " ".repeat(indent));
-      for statement in &self.false_block {
-        statement.print(indent + 2);
-      }
-    }
-  }
 }
 
 // #[cfg(test)]

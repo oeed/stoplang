@@ -48,12 +48,6 @@ impl<'a> Ast<'a> {
     }
     Ok(Ast { statements })
   }
-
-  pub fn print(&self) {
-    for statement in &self.statements {
-      statement.print(0);
-    }
-  }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
