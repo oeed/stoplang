@@ -1,9 +1,8 @@
+use super::{scope::ScopeStack, variable::Variable, Eval, RuntimeResult};
 use crate::ast::{
   statement::{conditional::Conditional, Statement},
   Location,
 };
-
-use super::{scope::ScopeStack, variable::Variable, Eval, RuntimeResult};
 
 impl<'a> Statement<'a> {
   fn eval(&self, scope: &mut ScopeStack<'a>) -> RuntimeResult<StatementValue<'a>> {
@@ -64,7 +63,8 @@ impl<'a> Statement<'a> {
 
     if let Some(last_statement) = last_statement {
       Ok(last_statement.eval(scope)?)
-    } else {
+    }
+    else {
       Ok(StatementValue::End(Variable::Nil))
     }
   }
@@ -75,7 +75,8 @@ impl<'a> Conditional<'a> {
     let condition = self.condition.eval(scope)?.try_into_bool(self.condition.location())?;
     if condition {
       Statement::eval_block(scope, &self.true_block)
-    } else {
+    }
+    else {
       Statement::eval_block(scope, &self.false_block)
     }
   }

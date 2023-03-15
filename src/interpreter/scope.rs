@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 
-use crate::ast::{identifier::Identifier, Location};
-
 use super::{variable::Variable, RuntimeError, RuntimeResult};
+use crate::ast::{identifier::Identifier, Location};
 
 pub struct Scope<'a> {
   pub variables: HashMap<Identifier, Variable<'a>>,
@@ -227,7 +226,8 @@ fn std_lib(global_scope: &mut Scope) {
           list.sort_by(|a, b| {
             if let (Variable::Number(a), Variable::Number(b)) = (a, b) {
               a.partial_cmp(b).unwrap()
-            } else {
+            }
+            else {
               panic!("sort() can only be called on lists of numbers")
             }
           });

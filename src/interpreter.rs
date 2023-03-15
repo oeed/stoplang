@@ -1,7 +1,7 @@
-use crate::ast::{statement::Statement, Ast, Location};
 use thiserror::Error;
 
 use self::{scope::ScopeStack, variable::Variable};
+use crate::ast::{statement::Statement, Ast, Location};
 
 mod expression;
 mod operator;

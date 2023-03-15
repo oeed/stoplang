@@ -1,7 +1,7 @@
-use crate::token::{TokenError, TokenStream};
 use thiserror::Error;
 
 use self::statement::Statement;
+use crate::token::{TokenError, TokenStream};
 
 pub mod expression;
 pub mod identifier;
@@ -42,7 +42,8 @@ impl<'a> Ast<'a> {
     loop {
       if let Some(statement) = Statement::try_statement_opt(tokens)? {
         statements.push(statement)
-      } else {
+      }
+      else {
         break;
       }
     }
@@ -73,7 +74,8 @@ impl Location {
         }
       }
       format!("line {}, col {}", 0, 0)
-    } else {
+    }
+    else {
       String::from("end of file")
     }
   }

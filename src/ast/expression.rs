@@ -1,11 +1,10 @@
-use crate::{
-  interpreter::{RuntimeError, RuntimeResult},
-  token::{Grammar, Keyword, Operator, TokenStream},
-};
-
 use super::{
   identifier::{self, Identifier},
   AstError, AstResult, Location,
+};
+use crate::{
+  interpreter::{RuntimeError, RuntimeResult},
+  token::{Grammar, Keyword, Operator, TokenStream},
 };
 
 #[derive(Debug, PartialEq, Clone)]
@@ -36,17 +35,22 @@ impl<'a> Expression<'a> {
     // TODO: maybe allow for backets?
     let right = if tokens.try_keyword(Keyword::True).is_ok() {
       Expression::Bool(true, tokens.location())
-    } else if tokens.try_keyword(Keyword::False).is_ok() {
+    }
+    else if tokens.try_keyword(Keyword::False).is_ok() {
       Expression::Bool(false, tokens.location())
-    } else if let Some(string) = tokens.try_string_opt()? {
+    }
+    else if let Some(string) = tokens.try_string_opt()? {
       Expression::String(string, tokens.location())
-    } else if let Some(number) = tokens.try_number_opt()? {
+    }
+    else if let Some(number) = tokens.try_number_opt()? {
       Expression::Number(number, tokens.location())
-    } else if tokens.try_grammar(Grammar::CloseBracket).is_ok() {
+    }
+    else if tokens.try_grammar(Grammar::CloseBracket).is_ok() {
       let expression = Expression::try_expression(tokens)?;
       tokens.try_grammar(Grammar::OpenBracket)?;
       Expression::Brackets(Box::new(expression), tokens.location())
-    } else if tokens.try_grammar(Grammar::CloseCurly).is_ok() {
+    }
+    else if tokens.try_grammar(Grammar::CloseCurly).is_ok() {
       let mut expressions = Vec::new();
       loop {
         if tokens.try_grammar(Grammar::OpenCurly).is_ok() {
@@ -62,7 +66,8 @@ impl<'a> Expression<'a> {
         }
       }
       Expression::Map(expressions, tokens.location())
-    } else if tokens.try_grammar(Grammar::ListClose).is_ok() {
+    }
+    else if tokens.try_grammar(Grammar::ListClose).is_ok() {
       let mut expressions = Vec::new();
       loop {
         if tokens.try_grammar(Grammar::ListOpen).is_ok() {
@@ -75,7 +80,8 @@ impl<'a> Expression<'a> {
         }
       }
       Expression::List(expressions, tokens.location())
-    } else if let Some(identifier) = tokens.try_identifier_opt()? {
+    }
+    else if let Some(identifier) = tokens.try_identifier_opt()? {
       // see if there are brackets, indicating a function call
       if tokens.try_grammar(Grammar::CloseBracket).is_ok() {
         let mut arguments = Vec::new();
@@ -97,7 +103,8 @@ impl<'a> Expression<'a> {
           arguments,
           location: tokens.location(),
         }
-      } else if tokens.try_grammar(Grammar::ListClose).is_ok() {
+      }
+      else if tokens.try_grammar(Grammar::ListClose).is_ok() {
         // support multiple indexes ie a[0][1]
         let mut expressions = Vec::new();
         expressions.push(Expression::try_expression(tokens)?);
@@ -111,10 +118,12 @@ impl<'a> Expression<'a> {
           expressions.push(Expression::try_expression(tokens)?);
         }
         Expression::Index(identifier, expressions, tokens.location())
-      } else {
+      }
+      else {
         Expression::Identifier(identifier, tokens.location())
       }
-    } else {
+    }
+    else {
       return Err(AstError::MissingExpression(tokens.location()));
     };
 
@@ -130,7 +139,8 @@ impl<'a> Expression<'a> {
         right: Box::new(right),
         location: tokens.location(),
       })
-    } else {
+    }
+    else {
       Ok(right)
     }
   }

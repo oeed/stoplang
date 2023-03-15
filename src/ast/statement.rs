@@ -1,8 +1,9 @@
-use crate::token::{Grammar, Keyword, TokenStream};
-
-use self::{conditional::Conditional, function::Function, function::While};
-
+use self::{
+  conditional::Conditional,
+  function::{Function, While},
+};
 use super::{expression::Expression, AstError, AstResult};
+use crate::token::{Grammar, Keyword, TokenStream};
 
 pub mod conditional;
 pub mod function;
@@ -25,13 +26,17 @@ impl<'a> Statement<'a> {
 
     let statement = if tokens.try_keyword(Keyword::Return).is_ok() {
       Statement::Return(Expression::try_expression(tokens)?)
-    } else if let Some(while_loop) = While::try_while_opt(tokens)? {
+    }
+    else if let Some(while_loop) = While::try_while_opt(tokens)? {
       Statement::While(while_loop)
-    } else if let Some(conditional) = Conditional::try_conditional_opt(tokens)? {
+    }
+    else if let Some(conditional) = Conditional::try_conditional_opt(tokens)? {
       Statement::Conditional(conditional)
-    } else if let Some(function) = Function::try_function_opt(tokens)? {
+    }
+    else if let Some(function) = Function::try_function_opt(tokens)? {
       Statement::Function(function)
-    } else {
+    }
+    else {
       Statement::Expression(Expression::try_expression(tokens)?)
     };
 
@@ -47,7 +52,8 @@ impl<'a> Statement<'a> {
       }
       if let Some(statement) = Statement::try_statement_opt(tokens)? {
         statements.push(statement)
-      } else {
+      }
+      else {
         return Err(AstError::MissingStatement(tokens.location()));
       }
     }

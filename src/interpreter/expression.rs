@@ -1,11 +1,10 @@
+use super::{scope::ScopeStack, statement::StatementValue, variable::Variable, Eval, RuntimeError, RuntimeResult};
 use crate::ast::{
   expression::{self, Expression},
   identifier,
   statement::Statement,
   Location,
 };
-
-use super::{scope::ScopeStack, statement::StatementValue, variable::Variable, Eval, RuntimeError, RuntimeResult};
 
 impl<'a> Expression<'a> {
   pub fn eval(&self, scope: &mut ScopeStack<'a>) -> RuntimeResult<Variable<'a>> {

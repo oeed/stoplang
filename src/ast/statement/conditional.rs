@@ -1,9 +1,8 @@
+use super::Statement;
 use crate::{
   ast::{expression::Expression, AstResult, Location},
   token::{Keyword, TokenStream},
 };
-
-use super::Statement;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Conditional<'a> {
@@ -31,7 +30,8 @@ impl<'a> Conditional<'a> {
         false_block,
         location,
       }))
-    } else {
+    }
+    else {
       Ok(Some(Conditional {
         condition,
         true_block,

@@ -1,6 +1,8 @@
-use crate::ast::{identifier::Identifier, Location};
 use std::fmt;
+
 use thiserror::Error;
+
+use crate::ast::{identifier::Identifier, Location};
 
 #[derive(PartialEq, Eq, Error, Debug)]
 #[error("token error: {error}")]
@@ -128,7 +130,8 @@ impl<'a> TokenStream<'a> {
     TokenStream {
       next_position: if string.is_empty() {
         None
-      } else {
+      }
+      else {
         Some(string.len() - 1)
       },
       string,
@@ -146,7 +149,8 @@ impl<'a> TokenStream<'a> {
     self.next_position.and_then(|next_pos| {
       if n <= next_pos + 1 {
         self.string.get(next_pos + 1 - n..=next_pos)
-      } else {
+      }
+      else {
         None
       }
     })
@@ -161,14 +165,17 @@ impl<'a> TokenStream<'a> {
           .expect("next_position should always be valid");
         if next_pos >= n {
           self.next_position = Some(next_pos - n);
-        } else {
+        }
+        else {
           self.next_position = None;
         }
         Some(char)
-      } else {
+      }
+      else {
         None
       }
-    } else {
+    }
+    else {
       None
     }
   }
@@ -189,7 +196,8 @@ impl<'a> TokenStream<'a> {
           // consume the whitespace, then repeat.
           self.consume_next_char();
           return self.skip_noop();
-        } else if next_char == '\\' && self.peek_next_n(2) == Some("\\\\") {
+        }
+        else if next_char == '\\' && self.peek_next_n(2) == Some("\\\\") {
           // start of a comment, read until the end of the line
           loop {
             match self.consume_next_char() {
@@ -197,10 +205,12 @@ impl<'a> TokenStream<'a> {
               _ => continue,
             }
           }
-        } else {
+        }
+        else {
           break;
         }
-      } else {
+      }
+      else {
         break;
       }
     }
@@ -226,7 +236,8 @@ impl<'a> TokenStream<'a> {
             location: self.location(),
           });
         }
-      } else if !Identifier::is_valid_char(char) {
+      }
+      else if !Identifier::is_valid_char(char) {
         // end of identifier
         return Ok(Some(Identifier(String::from(self.consume_next_n(n - 1).unwrap()))));
       }
@@ -250,24 +261,29 @@ impl<'a> TokenStream<'a> {
           let char = str.chars().nth(0).unwrap();
           if n == 1 && !char.is_numeric() {
             return Ok(None);
-          } else if char.is_numeric() {
+          }
+          else if char.is_numeric() {
             continue;
-          } else if char == '.' {
+          }
+          else if char == '.' {
             if n == 1 {
               return Err(TokenError {
                 error: "number cannot end in decimal".to_string(),
                 location: self.location(),
               });
-            } else if had_decimal {
+            }
+            else if had_decimal {
               return Err(TokenError {
                 error: "invalid number, cannot have multiple decimals".to_string(),
                 location: self.location(),
               });
-            } else {
+            }
+            else {
               had_decimal = true;
             }
             continue;
-          } else {
+          }
+          else {
             // non-number char, thus end of number
           }
         }
@@ -315,7 +331,8 @@ impl<'a> TokenStream<'a> {
     if self.peek_next_n(str.len()) == Some(str) {
       self.consume_next_n(str.len());
       Ok(str)
-    } else {
+    }
+    else {
       Err(TokenError {
         error: format!("expected: {str}"),
         location: self.location(),
@@ -350,7 +367,8 @@ impl<'a> TokenStream<'a> {
 
       self.consume_next_n(keyword.str().len());
       Ok(keyword)
-    } else {
+    }
+    else {
       Err(TokenError {
         error: format!("expected keyword '{}'", keyword.str()),
         location: self.location(),

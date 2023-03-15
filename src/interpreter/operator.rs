@@ -1,8 +1,9 @@
-use super::RuntimeError;
-use super::{scope::ScopeStack, variable::Variable, RuntimeResult};
-use crate::ast::{identifier, Location};
-use crate::interpreter::Eval;
-use crate::{ast::expression::Expression, token::Operator};
+use super::{scope::ScopeStack, variable::Variable, RuntimeError, RuntimeResult};
+use crate::{
+  ast::{expression::Expression, identifier, Location},
+  interpreter::Eval,
+  token::Operator,
+};
 
 impl Operator {
   pub fn eval<'a>(
