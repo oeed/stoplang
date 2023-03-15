@@ -78,7 +78,7 @@ impl Location {
           }
         }
       }
-      unreachable!()
+      return format!("line {}, col {}", 0, 0);
     } else {
       String::from("end of file")
     }

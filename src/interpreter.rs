@@ -30,6 +30,10 @@ pub enum RuntimeError {
     length: usize,
     location: Location,
   },
+  #[error("key '{key}' not found")]
+  KeyNotFound { key: String, location: Location },
+  #[error("invalid assignment")]
+  InvalidAssignment { location: Location },
 }
 pub type RuntimeResult<T> = Result<T, RuntimeError>;
 impl RuntimeError {
@@ -44,6 +48,8 @@ impl RuntimeError {
         length,
         location,
       } => *location,
+      RuntimeError::KeyNotFound { key, location } => *location,
+      RuntimeError::InvalidAssignment { location } => *location,
     }
   }
 }

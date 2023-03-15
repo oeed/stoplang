@@ -5,7 +5,7 @@ use crate::ast::{identifier::Identifier, Location};
 use super::{variable::Variable, RuntimeError, RuntimeResult};
 
 pub struct Scope<'a> {
-  pub variables: HashMap<Identifier<'a>, Variable<'a>>,
+  pub variables: HashMap<Identifier, Variable<'a>>,
 }
 
 impl<'a> Scope<'a> {
@@ -15,15 +15,15 @@ impl<'a> Scope<'a> {
     }
   }
 
-  fn get(&self, name: &Identifier<'a>) -> Option<&Variable<'a>> {
+  fn get(&self, name: &Identifier) -> Option<&Variable<'a>> {
     self.variables.get(&name)
   }
 
-  fn get_mut(&mut self, name: &Identifier<'a>) -> Option<&mut Variable<'a>> {
+  fn get_mut(&mut self, name: &Identifier) -> Option<&mut Variable<'a>> {
     self.variables.get_mut(&name)
   }
 
-  pub fn set(&mut self, name: Identifier<'a>, variable: Variable<'a>) {
+  pub fn set(&mut self, name: Identifier, variable: Variable<'a>) {
     self.variables.insert(name, variable);
   }
 
@@ -43,7 +43,7 @@ impl<'a> ScopeStack<'a> {
     ScopeStack(vec![Scope::new()], global_scope)
   }
 
-  pub fn get(&self, name: &Identifier<'a>, location: Location) -> RuntimeResult<&Variable<'a>> {
+  pub fn get(&self, name: &Identifier, location: Location) -> RuntimeResult<&Variable<'a>> {
     for scope in self.0.iter().rev() {
       if let Some(var) = scope.get(name) {
         return Ok(var);
@@ -60,7 +60,7 @@ impl<'a> ScopeStack<'a> {
     })
   }
 
-  pub fn get_mut(&mut self, name: &Identifier<'a>, location: Location) -> RuntimeResult<&mut Variable<'a>> {
+  pub fn get_mut(&mut self, name: &Identifier, location: Location) -> RuntimeResult<&mut Variable<'a>> {
     for scope in self.0.iter_mut().rev() {
       if let Some(var) = scope.get_mut(name) {
         return Ok(var);
@@ -77,7 +77,7 @@ impl<'a> ScopeStack<'a> {
     })
   }
 
-  pub fn set(&mut self, name: Identifier<'a>, variable: Variable<'a>) {
+  pub fn set(&mut self, name: Identifier, variable: Variable<'a>) {
     self.0.last_mut().unwrap().set(name, variable);
   }
 
@@ -104,7 +104,7 @@ impl<'a> ScopeStack<'a> {
 
 fn std_lib(global_scope: &mut Scope) {
   global_scope.set(
-    Identifier("print"),
+    Identifier(String::from("print")),
     Variable::NativeFunction(|args| {
       for arg in args {
         match arg {
@@ -125,6 +125,16 @@ fn std_lib(global_scope: &mut Scope) {
           Variable::Nil => print!("nil"),
           Variable::NativeFunction(_) => print!("function"),
           Variable::Function(_) => print!("function"),
+          Variable::Map(map) => {
+            print!("{{");
+            for (i, (key, value)) in map.iter().enumerate() {
+              if i != 0 {
+                print!(", ");
+              }
+              print!("\"{}\": {}", key, value);
+            }
+            print!("}}");
+          }
         }
       }
       println!();
@@ -132,7 +142,7 @@ fn std_lib(global_scope: &mut Scope) {
     }),
   );
   global_scope.set(
-    Identifier("push"),
+    Identifier(String::from("push")),
     Variable::NativeFunction(|args| {
       assert_eq!(args.len(), 2);
       let mut args = args.into_iter();
@@ -149,7 +159,7 @@ fn std_lib(global_scope: &mut Scope) {
     }),
   );
   global_scope.set(
-    Identifier("pop"),
+    Identifier(String::from("pop")),
     Variable::NativeFunction(|args| {
       assert_eq!(args.len(), 1);
       let first = args.into_iter().next().unwrap();
@@ -164,7 +174,7 @@ fn std_lib(global_scope: &mut Scope) {
     }),
   );
   global_scope.set(
-    Identifier("len"),
+    Identifier(String::from("len")),
     Variable::NativeFunction(|args| {
       assert_eq!(args.len(), 1);
       let first = args.into_iter().next().unwrap();
@@ -177,7 +187,7 @@ fn std_lib(global_scope: &mut Scope) {
     }),
   );
   global_scope.set(
-    Identifier("input"),
+    Identifier(String::from("input")),
     Variable::NativeFunction(|args| {
       assert_eq!(args.len(), 0);
       let mut input = String::new();
@@ -186,7 +196,7 @@ fn std_lib(global_scope: &mut Scope) {
     }),
   );
   global_scope.set(
-    Identifier("type"),
+    Identifier(String::from("type")),
     Variable::NativeFunction(|args| {
       assert_eq!(args.len(), 1);
       let first = args.into_iter().next().unwrap();
@@ -199,11 +209,12 @@ fn std_lib(global_scope: &mut Scope) {
         Variable::Nil => Variable::String("nil".to_string()),
         Variable::NativeFunction(_) => Variable::String("function".to_string()),
         Variable::Function(_) => Variable::String("function".to_string()),
+        Variable::Map(_) => Variable::String("map".to_string()),
       }
     }),
   );
   global_scope.set(
-    Identifier("range"),
+    Identifier(String::from("range")),
     Variable::NativeFunction(|args| {
       assert_eq!(args.len(), 2);
       let mut args = args.into_iter();
@@ -224,7 +235,7 @@ fn std_lib(global_scope: &mut Scope) {
   );
 
   global_scope.set(
-    Identifier("sort"),
+    Identifier(String::from("sort")),
     Variable::NativeFunction(|args| {
       assert_eq!(args.len(), 1);
       let first = args.into_iter().next().unwrap();
@@ -246,7 +257,7 @@ fn std_lib(global_scope: &mut Scope) {
     }),
   );
   global_scope.set(
-    Identifier("number"),
+    Identifier(String::from("number")),
     Variable::NativeFunction(|args| {
       assert_eq!(args.len(), 1);
       let first = args.into_iter().next().unwrap();
@@ -259,7 +270,7 @@ fn std_lib(global_scope: &mut Scope) {
     }),
   );
   global_scope.set(
-    Identifier("string"),
+    Identifier(String::from("string")),
     Variable::NativeFunction(|args| {
       assert_eq!(args.len(), 1);
       let first = args.into_iter().next().unwrap();
@@ -272,7 +283,7 @@ fn std_lib(global_scope: &mut Scope) {
     }),
   );
   global_scope.set(
-    Identifier("bool"),
+    Identifier(String::from("bool")),
     Variable::NativeFunction(|args| {
       assert_eq!(args.len(), 1);
       let first = args.into_iter().next().unwrap();
@@ -285,7 +296,7 @@ fn std_lib(global_scope: &mut Scope) {
     }),
   );
   global_scope.set(
-    Identifier("list"),
+    Identifier(String::from("list")),
     Variable::NativeFunction(|args| {
       let mut list = Vec::new();
       for arg in args {
@@ -295,7 +306,7 @@ fn std_lib(global_scope: &mut Scope) {
     }),
   );
   global_scope.set(
-    Identifier("format"),
+    Identifier(String::from("format")),
     Variable::NativeFunction(|args| {
       assert_eq!(args.len(), 2);
       let mut args = args.into_iter();

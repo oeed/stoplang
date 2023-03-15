@@ -1,0 +1,21 @@
+([20][50]ls)print
+
+{
+    i + 1 = i
+    (arr, ls)push = ls
+    {
+        j + 1 = j
+        (j, arr)push = arr
+    }
+    j < (rn)len while
+    0 = j
+    [] = arr
+}
+i < (rn)len while
+0 = i
+
+(grid_size, 0)range = rn
+
+[] = ls
+
+100 = grid_size

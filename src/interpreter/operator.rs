@@ -22,21 +22,23 @@ impl Operator {
           return Ok(Variable::Nil);
         }
         Expression::Index(identifier, expression, _) => {
-          let location = right.location();
-          let idx = expression.eval(scope)?.try_into_number(location)?;
-          let list = scope.get(identifier, location)?.try_into_list(location)?;
-          if (idx < 0.0) || (idx as usize >= list.len()) {
-            return Err(RuntimeError::IndexOutOfBounds {
-              index: idx as usize,
-              length: list.len(),
-              location,
+          // Only support 1 level of indexing for assignments
+          // The reason for this is that I can't figure out how to get a mutable refernce (that isn't cloned) to things in a
+          // nested map/list structure
+
+          // Therefore the only solution would be to recursively clone the entire list/map hierarchy
+
+          if (expression.len() != 1) {
+            return Err(RuntimeError::InvalidAssignment {
+              location: right.location(),
             });
           }
-          // this would be REALLY slow but I can't figure out how to get a mutable reference to the list
-          let mut clonedList = list.clone();
-          clonedList[idx as usize] = left;
 
-          scope.set(*identifier, Variable::List(clonedList));
+          let location = right.location();
+          let mut variable = scope.get(identifier, location)?.clone();
+          let idx = expression[0].eval(scope)?;
+          variable.set_at_index(idx, left, right.location());
+          scope.set(identifier.clone(), variable);
           return Ok(Variable::Nil);
         }
         _ => (),

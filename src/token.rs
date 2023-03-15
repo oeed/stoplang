@@ -20,6 +20,7 @@ pub enum Grammar {
   Comma,
   ListOpen,
   ListClose,
+  Colon,
 }
 
 impl Grammar {
@@ -34,6 +35,7 @@ impl Grammar {
       Comma => ",",
       ListOpen => "[",
       ListClose => "]",
+      Colon => ":",
     }
   }
 }
@@ -208,7 +210,7 @@ impl<'a> TokenStream<'a> {
     self.next_position.is_none()
   }
 
-  pub fn try_identifier_opt(&mut self) -> TokenResult<Option<Identifier<'a>>> {
+  pub fn try_identifier_opt(&mut self) -> TokenResult<Option<Identifier>> {
     self.skip_noop();
     for n in 1.. {
       let str = match self.peek_next_n(n) {
@@ -226,13 +228,13 @@ impl<'a> TokenStream<'a> {
         }
       } else if !Identifier::is_valid_char(char) {
         // end of identifier
-        return Ok(Some(Identifier(self.consume_next_n(n - 1).unwrap())));
+        return Ok(Some(Identifier(String::from(self.consume_next_n(n - 1).unwrap()))));
       }
     }
     unreachable!()
   }
 
-  pub fn try_identifier(&mut self) -> TokenResult<Identifier<'a>> {
+  pub fn try_identifier(&mut self) -> TokenResult<Identifier> {
     self.try_identifier_opt()?.ok_or_else(|| TokenError {
       error: "missing identifier".to_string(),
       location: self.location(),
@@ -401,8 +403,11 @@ mod tests {
   #[test]
   fn identifier_opt() {
     let mut tokens = TokenStream::new("  2mY_var ");
-    assert_eq!(tokens.try_identifier_opt(), Ok(Some(Identifier("2mY_var"))));
-    assert_eq!(tokens.try_identifier_opt(), Ok(Some(Identifier("arg1"))));
+    assert_eq!(
+      tokens.try_identifier_opt(),
+      Ok(Some(Identifier(String::from("2mY_var"))))
+    );
+    assert_eq!(tokens.try_identifier_opt(), Ok(Some(Identifier(String::from("arg1")))));
     assert_eq!(tokens.try_identifier_opt(), Ok(None));
   }
 

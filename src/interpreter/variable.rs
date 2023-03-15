@@ -1,4 +1,11 @@
-use crate::ast::{statement::function::Function, Location};
+use std::collections::HashMap;
+
+use crate::ast::{
+  expression::Expression,
+  identifier::{self, Identifier},
+  statement::function::Function,
+  Location,
+};
 use derive_more::Display;
 
 use super::{scope::ScopeStack, RuntimeError, RuntimeResult};
@@ -11,6 +18,7 @@ pub enum Variable<'a> {
   Function(Function<'a>),
   NativeFunction(fn(Vec<Variable<'a>>) -> Variable<'a>),
   List(Vec<Variable<'a>>),
+  Map(HashMap<Identifier, Variable<'a>>),
   Nil,
 }
 
@@ -47,6 +55,7 @@ impl<'a> std::fmt::Display for Variable<'a> {
       }
       Variable::Nil => write!(f, "nil"),
       Variable::NativeFunction(_) => write!(f, "<native function>"),
+      Variable::Map(_) => write!(f, "<map>"),
     }
   }
 }
@@ -99,6 +108,90 @@ impl<'a> Variable<'a> {
         expected: "list",
         location,
       }),
+    }
+  }
+
+  pub fn try_into_identifier(&self, location: Location) -> RuntimeResult<Identifier> {
+    match self {
+      Variable::String(string) => {
+        let identifier = identifier::Identifier(string.clone());
+        Ok(identifier)
+      }
+      _ => Err(RuntimeError::InvalidType {
+        expected: "string",
+        location,
+      }),
+    }
+  }
+
+  pub fn get_at_index(&self, idx: Variable, location: Location) -> RuntimeResult<Variable<'a>> {
+    match self {
+      Variable::List(list) => {
+        let idx = idx.try_into_number(location)?;
+        if idx < 0.0 || idx as usize >= list.len() {
+          return Err(RuntimeError::IndexOutOfBounds {
+            index: idx as usize,
+            length: list.len(),
+            location: location,
+          });
+        }
+        Ok(list[idx as usize].clone())
+      }
+      Variable::Map(values) => {
+        let key = idx.try_into_str(location)?;
+        let identifier = identifier::Identifier(String::from(key));
+        match values.get(&identifier) {
+          Some(value) => Ok(value.clone()),
+          None => Err(RuntimeError::KeyNotFound {
+            key: idx.to_string(),
+            location: location,
+          }),
+        }
+      }
+      _ => {
+        return Err(RuntimeError::InvalidType {
+          expected: "list or map",
+          location: location,
+        })
+      }
+    }
+  }
+
+  pub fn set_at_index(
+    &mut self,
+    idx: Variable<'a>,
+    value: Variable<'a>,
+    location: Location,
+  ) -> RuntimeResult<Variable<'a>> {
+    match self {
+      Variable::List(list) => {
+        let idx = idx.try_into_number(location)?;
+        if idx < 0.0 || idx as usize >= list.len() {
+          return Err(RuntimeError::IndexOutOfBounds {
+            index: idx as usize,
+            length: list.len(),
+            location: location,
+          });
+        }
+        let mut cloned = list.clone();
+        cloned[idx as usize] = value;
+        Ok(Variable::List(cloned))
+      }
+      Variable::Map(map) => {
+        let key = idx.try_into_str(location)?;
+        let identifier = identifier::Identifier(String::from(key));
+
+        let mut cloned = map.clone();
+        cloned.insert(identifier, value);
+
+        Ok(Variable::Map(cloned))
+      }
+      _ => {
+        return Err(RuntimeError::InvalidType {
+          expected: "list or map",
+          location: location,
+        })
+      }
     }
   }
 }

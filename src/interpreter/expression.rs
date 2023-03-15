@@ -40,9 +40,9 @@ impl<'a> Expression<'a> {
             }
             scope.push();
             for (i, provided) in arguments.iter().enumerate() {
-              let expected = function.arguments[i];
+              let expected = &function.arguments[i];
               let value = provided.eval(scope)?;
-              scope.set(expected, value);
+              scope.set(expected.clone(), value);
             }
 
             let result = match Statement::eval_block(scope, &function.block)? {
@@ -75,17 +75,26 @@ impl<'a> Expression<'a> {
         Ok(Variable::List(list))
       }
       Expression::Index(identifier, expression, location) => {
-        // The expression must evaluate to a number
-        let idx = expression.eval(scope)?.try_into_number(*location)?;
-        let list = scope.get(identifier, *location)?.try_into_list(*location)?;
-        if idx < 0.0 || idx as usize >= list.len() {
-          return Err(RuntimeError::IndexOutOfBounds {
-            index: idx as usize,
-            length: list.len(),
-            location: *location,
-          });
+        // Index expressions are only valid for lists and maps
+        let mut variable = scope.get(identifier, *location)?.clone();
+
+        for (value) in expression {
+          let idx = value.eval(scope)?;
+          let result = variable.get_at_index(idx, *location)?;
+          variable = result;
         }
-        Ok(list[idx as usize].clone())
+        Ok(variable)
+      }
+      Expression::Map(values, location) => {
+        let mut map = std::collections::HashMap::new();
+
+        for (ident, expr) in values {
+          let key = ident.clone();
+          let value = expr.eval(scope)?;
+          map.insert(key, value);
+        }
+
+        Ok(Variable::Map(map))
       }
     }
   }

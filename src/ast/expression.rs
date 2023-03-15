@@ -14,7 +14,8 @@ pub enum Expression<'a> {
   String(&'a str, Location), // TODO: given we want to reverse, maybe use owned?
   Number(f64, Location),
   List(Vec<Expression<'a>>, Location),
-  Index(Identifier<'a>, Box<Expression<'a>>, Location),
+  Map(Vec<(Identifier, Expression<'a>)>, Location),
+  Index(Identifier, Vec<Expression<'a>>, Location),
   Operation {
     operator: Operator,
     left: Box<Expression<'a>>,
@@ -22,11 +23,11 @@ pub enum Expression<'a> {
     location: Location,
   },
   Call {
-    function: Identifier<'a>,
+    function: Identifier,
     arguments: Vec<Expression<'a>>,
     location: Location,
   },
-  Identifier(Identifier<'a>, Location),
+  Identifier(Identifier, Location),
   Brackets(Box<Expression<'a>>, Location),
 }
 
@@ -45,6 +46,22 @@ impl<'a> Expression<'a> {
       let expression = Expression::try_expression(tokens)?;
       tokens.try_grammar(Grammar::OpenBracket)?;
       Expression::Brackets(Box::new(expression), tokens.location())
+    } else if tokens.try_grammar(Grammar::CloseCurly).is_ok() {
+      let mut expressions = Vec::new();
+      loop {
+        if tokens.try_grammar(Grammar::OpenCurly).is_ok() {
+          break;
+        }
+        let identifier = tokens.try_identifier()?;
+        tokens.try_grammar(Grammar::Colon)?;
+        let expression = Expression::try_expression(tokens)?;
+        expressions.push((identifier, expression));
+        if tokens.try_grammar(Grammar::Comma).is_err() {
+          tokens.try_grammar(Grammar::OpenCurly)?;
+          break;
+        }
+      }
+      Expression::Map(expressions, tokens.location())
     } else if tokens.try_grammar(Grammar::ListClose).is_ok() {
       let mut expressions = Vec::new();
       loop {
@@ -81,10 +98,19 @@ impl<'a> Expression<'a> {
           location: tokens.location(),
         }
       } else if tokens.try_grammar(Grammar::ListClose).is_ok() {
-        // this is an index
-        let index = Expression::try_expression(tokens)?;
-        tokens.try_grammar(Grammar::ListOpen)?;
-        Expression::Index(identifier, Box::new(index), tokens.location())
+        // support multiple indexes ie a[0][1]
+        let mut expressions = Vec::new();
+        expressions.push(Expression::try_expression(tokens)?);
+
+        loop {
+          tokens.try_grammar(Grammar::ListOpen)?;
+
+          if tokens.try_grammar(Grammar::ListClose).is_err() {
+            break;
+          }
+          expressions.push(Expression::try_expression(tokens)?);
+        }
+        Expression::Index(identifier, expressions, tokens.location())
       } else {
         Expression::Identifier(identifier, tokens.location())
       }
@@ -120,12 +146,13 @@ impl<'a> Expression<'a> {
       | Expression::Call { location, .. } => *location,
       Expression::List(_, location) => *location,
       Expression::Index(_, _, location) => *location,
+      Expression::Map(_, location) => *location,
     }
   }
 
-  pub fn try_into_identifier(&self) -> RuntimeResult<Identifier<'a>> {
+  pub fn try_into_identifier(&self) -> RuntimeResult<Identifier> {
     match self {
-      Expression::Identifier(identifier, _) => Ok(*identifier),
+      Expression::Identifier(identifier, _) => Ok(identifier.clone()),
       _ => Err(RuntimeError::InvalidExpression {
         expected: "identifier",
         location: self.location(),
@@ -140,10 +167,11 @@ impl<'a> Expression<'a> {
       Expression::String(value, _) => println!("{}{}", indent, value),
       Expression::Number(value, _) => println!("{}{}", indent, value),
       Expression::List(expressions, _) => {
-        println!("{}{}", indent, "[]");
+        println!("{}[", indent);
         for expression in expressions {
           expression.print(indent.len() + 2);
         }
+        println!("{}]", indent);
       }
       Expression::Operation {
         operator, left, right, ..
@@ -166,8 +194,19 @@ impl<'a> Expression<'a> {
         expression.print(indent.len() + 2);
       }
       Expression::Index(identifier, index, _) => {
-        println!("{}[{}]", indent, identifier);
-        index.print(indent.len() + 2);
+        println!("{}{}<", indent, identifier);
+        for expression in index {
+          expression.print(indent.len() + 2);
+        }
+        println!("{}>", indent);
+      }
+      Expression::Map(values, _) => {
+        println!("{}{}", indent, "{");
+        for (key, value) in values {
+          println!("{}\"{}\":", indent, key);
+          value.print(indent.len() + 2);
+        }
+        println!("{}{}", indent, "}");
       }
     }
   }

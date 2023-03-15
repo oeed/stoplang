@@ -11,7 +11,7 @@ impl<'a> Statement<'a> {
       Statement::Conditional(conditional) => conditional.eval(scope),
       Statement::Expression(expression) => Ok(StatementValue::End(expression.eval(scope)?)),
       Statement::Function(function) => {
-        scope.set(function.name, Variable::Function(function.clone()));
+        scope.set(function.name.clone(), Variable::Function(function.clone()));
         Ok(StatementValue::End(Variable::Nil))
       }
       Statement::While(while_loop) => {

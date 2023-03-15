@@ -9,8 +9,8 @@ use super::Statement;
 #[derive(Debug, PartialEq, Clone, Display)]
 #[display(fmt = "Function({})", name)]
 pub struct Function<'a> {
-  pub name: Identifier<'a>,
-  pub arguments: Vec<Identifier<'a>>,
+  pub name: Identifier,
+  pub arguments: Vec<Identifier>,
   pub block: Vec<Statement<'a>>,
   pub location: Location,
 }

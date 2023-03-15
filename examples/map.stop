@@ -1,0 +1,11 @@
+(([total_age],"The total age of everyone is {}")format)print
+
+{
+    i + 1 = i
+    total_age + ["age"][i]people = total_age
+}
+i < (people)len while
+0 = i
+0 = total_age
+
+[{ "will": name, 29: age }, { "oliver": name, 27: age }] = people
