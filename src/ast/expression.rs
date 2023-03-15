@@ -13,7 +13,11 @@ pub enum Expression<'a> {
   Number(f64, Location),
   List(Vec<Expression<'a>>, Location),
   Map(HashMap<String, Expression<'a>>, Location),
-  Index(Identifier<'a>, Vec<Expression<'a>>, Location),
+  Index {
+    indexed: Identifier<'a>,
+    indices: Vec<Expression<'a>>,
+    location: Location,
+  },
   Operation {
     operator: Operator,
     left: Box<Expression<'a>>,
@@ -105,8 +109,8 @@ impl<'a> Expression<'a> {
         }
       } else if tokens.try_grammar(Grammar::ListClose).is_ok() {
         // support multiple indexes ie a[0][1]
-        let mut expressions = Vec::new();
-        expressions.push(Expression::try_expression(tokens)?);
+        let mut indices = Vec::new();
+        indices.push(Expression::try_expression(tokens)?);
 
         loop {
           tokens.try_grammar(Grammar::ListOpen)?;
@@ -114,9 +118,13 @@ impl<'a> Expression<'a> {
           if tokens.try_grammar(Grammar::ListClose).is_err() {
             break;
           }
-          expressions.push(Expression::try_expression(tokens)?);
+          indices.push(Expression::try_expression(tokens)?);
         }
-        Expression::Index(identifier, expressions, tokens.location())
+        Expression::Index {
+          indexed: identifier,
+          indices,
+          location: tokens.location(),
+        }
       } else {
         Expression::Identifier(identifier, tokens.location())
       }
@@ -151,14 +159,14 @@ impl<'a> Expression<'a> {
       | Expression::Operation { location, .. }
       | Expression::Call { location, .. } => *location,
       Expression::List(_, location) => *location,
-      Expression::Index(_, _, location) => *location,
+      Expression::Index { location, .. } => *location,
       Expression::Map(_, location) => *location,
     }
   }
 
   pub fn try_into_identifier(&self) -> RuntimeResult<Identifier<'a>> {
     match self {
-      Expression::Identifier(identifier, _) => Ok(identifier.clone()),
+      Expression::Identifier(identifier, _) => Ok(*identifier),
       _ => Err(RuntimeError::InvalidExpression {
         expected: "identifier",
         location: self.location(),

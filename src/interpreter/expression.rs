@@ -66,11 +66,15 @@ impl<'a> Expression<'a> {
         }
         Ok(Variable::List(list))
       }
-      Expression::Index(identifier, expression, location) => {
+      Expression::Index {
+        indexed,
+        indices,
+        location,
+      } => {
         // Index expressions are only valid for lists and maps
-        let mut variable = scope.get(identifier, *location)?.clone();
+        let mut variable = scope.get(indexed, *location)?.clone();
 
-        for value in expression {
+        for value in indices {
           let idx = value.eval(scope)?;
           let result = variable.get_at_index(idx, *location)?;
           variable = result;
