@@ -1,10 +1,5 @@
-use super::{scope::ScopeStack, statement::StatementValue, variable::Variable, Eval, RuntimeError, RuntimeResult};
-use crate::ast::{
-  expression::{self, Expression},
-  identifier,
-  statement::Statement,
-  Location,
-};
+use super::{scope::ScopeStack, statement::StatementValue, variable::Variable, RuntimeError, RuntimeResult};
+use crate::ast::{expression::Expression, statement::Statement};
 
 impl<'a> Expression<'a> {
   pub fn eval(&self, scope: &mut ScopeStack<'a>) -> RuntimeResult<Variable<'a>> {
@@ -13,7 +8,7 @@ impl<'a> Expression<'a> {
       Expression::String(str, _) => Ok(Variable::String(str.to_string())),
       Expression::Number(num, _) => Ok(Variable::Number(*num)),
       Expression::Identifier(name, location) => Ok(scope.get(name, *location)?.clone()), // variables are always copied
-      Expression::Brackets(expr, location) => expr.eval(scope),
+      Expression::Brackets(expr, ..) => expr.eval(scope),
       Expression::Operation {
         operator,
         left,
@@ -63,9 +58,9 @@ impl<'a> Expression<'a> {
           }),
         }
       }
-      Expression::List(expr, location) => {
+      Expression::List(expr, ..) => {
         let mut list = Vec::new();
-        for (value) in expr {
+        for value in expr {
           let variable = value.eval(scope)?;
           list.push(variable);
         }
@@ -75,14 +70,14 @@ impl<'a> Expression<'a> {
         // Index expressions are only valid for lists and maps
         let mut variable = scope.get(identifier, *location)?.clone();
 
-        for (value) in expression {
+        for value in expression {
           let idx = value.eval(scope)?;
           let result = variable.get_at_index(idx, *location)?;
           variable = result;
         }
         Ok(variable)
       }
-      Expression::Map(values, location) => {
+      Expression::Map(values, ..) => {
         let mut map = std::collections::HashMap::new();
 
         for (ident, expr) in values {

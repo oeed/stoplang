@@ -1,7 +1,6 @@
 use super::{scope::ScopeStack, variable::Variable, RuntimeError, RuntimeResult};
 use crate::{
-  ast::{expression::Expression, identifier, Location},
-  interpreter::Eval,
+  ast::{expression::Expression, Location},
   token::Operator,
 };
 
@@ -18,7 +17,7 @@ impl Operator {
 
     match self {
       Operator::Assign => match right {
-        Expression::Identifier(identifier, _) => {
+        Expression::Identifier(_, _) => {
           scope.set(right.try_into_identifier()?, left);
           return Ok(Variable::Nil);
         }
@@ -29,7 +28,7 @@ impl Operator {
 
           // Therefore the only solution would be to recursively clone the entire list/map hierarchy
 
-          if (expression.len() != 1) {
+          if expression.len() != 1 {
             return Err(RuntimeError::InvalidAssignment {
               location: right.location(),
             });
@@ -38,7 +37,7 @@ impl Operator {
           let location = right.location();
           let mut variable = scope.get(identifier, location)?.clone();
           let idx = expression[0].eval(scope)?;
-          variable.set_at_index(idx, left, right.location());
+          variable.set_at_index(idx, left, right.location())?;
           scope.set(identifier.clone(), variable);
           return Ok(Variable::Nil);
         }

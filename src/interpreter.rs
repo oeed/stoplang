@@ -43,12 +43,8 @@ impl RuntimeError {
       | RuntimeError::InvalidType { location, .. }
       | RuntimeError::InvalidExpression { location, .. }
       | RuntimeError::IncorrectArgumentCount { location, .. } => *location,
-      RuntimeError::IndexOutOfBounds {
-        index,
-        length,
-        location,
-      } => *location,
-      RuntimeError::KeyNotFound { key, location } => *location,
+      RuntimeError::IndexOutOfBounds { location, .. } => *location,
+      RuntimeError::KeyNotFound { location, .. } => *location,
       RuntimeError::InvalidAssignment { location } => *location,
     }
   }

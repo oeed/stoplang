@@ -147,7 +147,7 @@ fn std_lib(global_scope: &mut Scope) {
 
       match first {
         Variable::List(mut list) => {
-          let last = list.pop().unwrap();
+          list.pop().unwrap();
           Variable::List(list)
         }
         _ => panic!("pop() can only be called on lists"),
@@ -226,8 +226,7 @@ fn std_lib(global_scope: &mut Scope) {
           list.sort_by(|a, b| {
             if let (Variable::Number(a), Variable::Number(b)) = (a, b) {
               a.partial_cmp(b).unwrap()
-            }
-            else {
+            } else {
               panic!("sort() can only be called on lists of numbers")
             }
           });

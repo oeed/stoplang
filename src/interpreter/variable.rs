@@ -1,10 +1,7 @@
 use std::collections::HashMap;
 
-use derive_more::Display;
-
-use super::{scope::ScopeStack, RuntimeError, RuntimeResult};
+use super::{RuntimeError, RuntimeResult};
 use crate::ast::{
-  expression::Expression,
   identifier::{self, Identifier},
   statement::function::Function,
   Location,
