@@ -1,5 +1,8 @@
-use crate::ast::{identifier::Identifier, Location};
+use std::fmt;
+
 use thiserror::Error;
+
+use crate::ast::{identifier::Identifier, Location};
 
 #[derive(PartialEq, Eq, Error, Debug)]
 #[error("token error: {error}")]
@@ -17,6 +20,9 @@ pub enum Grammar {
   CloseCurly,
   DoubleQuote,
   Comma,
+  SquareOpen,
+  SquareClose,
+  Colon,
 }
 
 impl Grammar {
@@ -29,6 +35,9 @@ impl Grammar {
       CloseCurly => "}",
       DoubleQuote => "\"",
       Comma => ",",
+      SquareOpen => "[",
+      SquareClose => "]",
+      Colon => ":",
     }
   }
 }
@@ -86,6 +95,13 @@ pub enum Keyword {
   True,
   False,
   Return,
+  While,
+}
+
+impl fmt::Display for Operator {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "{}", self.str())
+  }
 }
 
 impl Keyword {
@@ -98,6 +114,7 @@ impl Keyword {
       True => "true",
       False => "false",
       Return => "return",
+      While => "while",
     }
   }
 }

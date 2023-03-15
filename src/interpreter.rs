@@ -1,13 +1,12 @@
-use crate::ast::{statement::Statement, Ast, Location};
 use thiserror::Error;
 
 use self::{scope::ScopeStack, variable::Variable};
+use crate::ast::{statement::Statement, Ast, Location};
 
 mod expression;
 mod operator;
 mod scope;
 mod statement;
-mod stopstd;
 mod variable;
 
 #[derive(Error, Debug, PartialEq, Eq)]
@@ -25,6 +24,14 @@ pub enum RuntimeError {
     received: usize,
     location: Location,
   },
+  #[error("index out of bounds, index: {index}, length: {length}")]
+  IndexOutOfBounds {
+    index: usize,
+    length: usize,
+    location: Location,
+  },
+  #[error("key '{key}' not found")]
+  KeyNotFound { key: String, location: Location },
 }
 pub type RuntimeResult<T> = Result<T, RuntimeError>;
 impl RuntimeError {
@@ -33,7 +40,9 @@ impl RuntimeError {
       RuntimeError::UnknownVariable { location, .. }
       | RuntimeError::InvalidType { location, .. }
       | RuntimeError::InvalidExpression { location, .. }
-      | RuntimeError::IncorrectArgumentCount { location, .. } => *location,
+      | RuntimeError::IncorrectArgumentCount { location, .. }
+      | RuntimeError::IndexOutOfBounds { location, .. }
+      | RuntimeError::KeyNotFound { location, .. } => *location,
     }
   }
 }

@@ -1,15 +1,23 @@
+use std::collections::HashMap;
+
+use super::{identifier::Identifier, AstError, AstResult, Location};
 use crate::{
   interpreter::{RuntimeError, RuntimeResult},
   token::{Grammar, Keyword, Operator, TokenStream},
 };
 
-use super::{identifier::Identifier, AstError, AstResult, Location};
-
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expression<'a> {
   Bool(bool, Location),
-  String(&'a str, Location), // TODO: given we want to reverse, maybe use owned?
+  String(&'a str, Location),
   Number(f64, Location),
+  List(Vec<Expression<'a>>, Location),
+  Map(HashMap<String, Expression<'a>>, Location),
+  Index {
+    indexed: Identifier<'a>,
+    indices: Vec<Expression<'a>>,
+    location: Location,
+  },
   Operation {
     operator: Operator,
     left: Box<Expression<'a>>,
@@ -40,6 +48,43 @@ impl<'a> Expression<'a> {
       let expression = Expression::try_expression(tokens)?;
       tokens.try_grammar(Grammar::OpenBracket)?;
       Expression::Brackets(Box::new(expression), tokens.location())
+    } else if tokens.try_grammar(Grammar::CloseCurly).is_ok() {
+      let mut map = HashMap::new();
+      loop {
+        if tokens.try_grammar(Grammar::OpenCurly).is_ok() {
+          break;
+        }
+        let key = if let Some(string) = tokens.try_string_opt()? {
+          string.to_owned()
+        } else {
+          tokens.try_identifier()?.0.to_owned()
+        };
+        if map.contains_key(&key) {
+          return Err(AstError::DuplicateKey(tokens.location()));
+        }
+        tokens.try_grammar(Grammar::Colon)?;
+
+        let value = Expression::try_expression(tokens)?;
+        map.insert(key, value);
+        if tokens.try_grammar(Grammar::Comma).is_err() {
+          tokens.try_grammar(Grammar::OpenCurly)?;
+          break;
+        }
+      }
+      Expression::Map(map, tokens.location())
+    } else if tokens.try_grammar(Grammar::SquareClose).is_ok() {
+      let mut expressions = Vec::new();
+      loop {
+        if tokens.try_grammar(Grammar::SquareOpen).is_ok() {
+          break;
+        }
+        expressions.push(Expression::try_expression(tokens)?);
+        if tokens.try_grammar(Grammar::Comma).is_err() {
+          tokens.try_grammar(Grammar::SquareOpen)?;
+          break;
+        }
+      }
+      Expression::List(expressions, tokens.location())
     } else if let Some(identifier) = tokens.try_identifier_opt()? {
       // see if there are brackets, indicating a function call
       if tokens.try_grammar(Grammar::CloseBracket).is_ok() {
@@ -60,6 +105,24 @@ impl<'a> Expression<'a> {
         Expression::Call {
           function: identifier,
           arguments,
+          location: tokens.location(),
+        }
+      } else if tokens.try_grammar(Grammar::SquareClose).is_ok() {
+        // support multiple indexes ie a[0][1]
+        let mut indices = Vec::new();
+        indices.push(Expression::try_expression(tokens)?);
+
+        loop {
+          tokens.try_grammar(Grammar::SquareOpen)?;
+
+          if tokens.try_grammar(Grammar::SquareClose).is_err() {
+            break;
+          }
+          indices.push(Expression::try_expression(tokens)?);
+        }
+        Expression::Index {
+          indexed: identifier,
+          indices,
           location: tokens.location(),
         }
       } else {
@@ -95,6 +158,9 @@ impl<'a> Expression<'a> {
       | Expression::Number(_, location)
       | Expression::Operation { location, .. }
       | Expression::Call { location, .. } => *location,
+      Expression::List(_, location) => *location,
+      Expression::Index { location, .. } => *location,
+      Expression::Map(_, location) => *location,
     }
   }
 

@@ -1,9 +1,8 @@
+use super::{scope::ScopeStack, variable::Variable, RuntimeResult};
 use crate::ast::{
   statement::{conditional::Conditional, Statement},
   Location,
 };
-
-use super::{scope::ScopeStack, variable::Variable, Eval, RuntimeResult};
 
 impl<'a> Statement<'a> {
   fn eval(&self, scope: &mut ScopeStack<'a>) -> RuntimeResult<StatementValue<'a>> {
@@ -11,7 +10,20 @@ impl<'a> Statement<'a> {
       Statement::Conditional(conditional) => conditional.eval(scope),
       Statement::Expression(expression) => Ok(StatementValue::End(expression.eval(scope)?)),
       Statement::Function(function) => {
-        scope.set(function.name, Variable::Function(function.clone()));
+        scope.set(function.name.clone(), Variable::Function(function.clone()));
+        Ok(StatementValue::End(Variable::Nil))
+      }
+      Statement::While(while_loop) => {
+        while while_loop
+          .condition
+          .eval(scope)?
+          .try_into_bool(while_loop.condition.location())?
+        {
+          match Statement::eval_block(scope, &while_loop.block)? {
+            StatementValue::Early(value) => return Ok(StatementValue::Early(value)),
+            _ => (),
+          }
+        }
         Ok(StatementValue::End(Variable::Nil))
       }
       // this path only happens if it's the last statement, so it's fine anyway
@@ -31,6 +43,7 @@ impl<'a> Statement<'a> {
       Statement::Conditional(conditional) => conditional.location,
       Statement::Expression(expression) => expression.location(),
       Statement::Function(function) => function.location,
+      Statement::While(while_loop) => while_loop.location,
       Statement::Return(ret) => ret.location(),
     }
   }

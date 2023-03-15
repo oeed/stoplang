@@ -1,7 +1,7 @@
-use crate::token::{TokenError, TokenStream};
 use thiserror::Error;
 
 use self::statement::Statement;
+use crate::token::{TokenError, TokenStream};
 
 pub mod expression;
 pub mod identifier;
@@ -17,6 +17,8 @@ pub enum AstError {
   MissingStatement(Location),
   #[error("missing identifier")]
   MissingIdentifier(Location),
+  #[error("duplicate key")]
+  DuplicateKey(Location),
 }
 pub type AstResult<T> = Result<T, AstError>;
 
@@ -26,7 +28,8 @@ impl AstError {
       AstError::TokenError(TokenError { location, .. })
       | AstError::MissingExpression(location)
       | AstError::MissingStatement(location)
-      | AstError::MissingIdentifier(location) => *location,
+      | AstError::MissingIdentifier(location)
+      | AstError::DuplicateKey(location) => *location,
     }
   }
 }
@@ -46,7 +49,6 @@ impl<'a> Ast<'a> {
         break;
       }
     }
-
     Ok(Ast { statements })
   }
 }
@@ -73,7 +75,7 @@ impl Location {
           }
         }
       }
-      unreachable!()
+      format!("line {}, col {}", 0, 0)
     } else {
       String::from("end of file")
     }

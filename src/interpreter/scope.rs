@@ -1,15 +1,14 @@
 use std::collections::HashMap;
 
+use super::{variable::Variable, RuntimeError, RuntimeResult};
 use crate::ast::{identifier::Identifier, Location};
 
-use super::{variable::Variable, RuntimeError, RuntimeResult};
-
-struct Scope<'a> {
+pub struct Scope<'a> {
   pub variables: HashMap<Identifier<'a>, Variable<'a>>,
 }
 
 impl<'a> Scope<'a> {
-  fn new() -> Self {
+  pub fn new() -> Self {
     Scope {
       variables: HashMap::new(),
     }
@@ -23,16 +22,18 @@ impl<'a> Scope<'a> {
     self.variables.get_mut(&name)
   }
 
-  fn set(&mut self, name: Identifier<'a>, variable: Variable<'a>) {
+  pub fn set(&mut self, name: Identifier<'a>, variable: Variable<'a>) {
     self.variables.insert(name, variable);
   }
 }
 
-pub struct ScopeStack<'a>(Vec<Scope<'a>>);
+pub struct ScopeStack<'a>(Vec<Scope<'a>>, Scope<'a>);
 
 impl<'a> ScopeStack<'a> {
   pub fn new() -> Self {
-    ScopeStack(vec![Scope::new()])
+    let mut global_scope = Scope::new();
+    std_lib(&mut global_scope);
+    ScopeStack(vec![Scope::new()], global_scope)
   }
 
   pub fn get(&self, name: &Identifier<'a>, location: Location) -> RuntimeResult<&Variable<'a>> {
@@ -40,6 +41,10 @@ impl<'a> ScopeStack<'a> {
       if let Some(var) = scope.get(name) {
         return Ok(var);
       }
+    }
+
+    if let Some(var) = self.1.get(name) {
+      return Ok(var);
     }
 
     Err(RuntimeError::UnknownVariable {
@@ -53,6 +58,10 @@ impl<'a> ScopeStack<'a> {
       if let Some(var) = scope.get_mut(name) {
         return Ok(var);
       }
+    }
+
+    if let Some(var) = self.1.get_mut(name) {
+      return Ok(var);
     }
 
     Err(RuntimeError::UnknownVariable {
@@ -72,4 +81,229 @@ impl<'a> ScopeStack<'a> {
   pub fn pop(&mut self) {
     self.0.pop();
   }
+}
+
+fn std_lib<'a>(global_scope: &mut Scope<'a>) {
+  global_scope.set(
+    Identifier("print"),
+    Variable::NativeFunction(|args| {
+      for arg in args {
+        match arg {
+          Variable::String(string) => print!("{}", string),
+          Variable::Number(number) => print!("{}", number),
+          Variable::Bool(true) => print!("true"),
+          Variable::Bool(false) => print!("false"),
+          Variable::List(list) => {
+            print!("[");
+            for (i, item) in list.iter().enumerate() {
+              if i != 0 {
+                print!(", ");
+              }
+              print!("{}", item);
+            }
+            print!("]");
+          }
+          Variable::Nil => print!("nil"),
+          Variable::NativeFunction(_) => print!("function"),
+          Variable::Function(_) => print!("function"),
+          Variable::Map(map) => {
+            print!("{{");
+            for (i, (key, value)) in map.iter().enumerate() {
+              if i != 0 {
+                print!(", ");
+              }
+              print!("\"{}\": {}", key, value);
+            }
+            print!("}}");
+          }
+        }
+      }
+      println!();
+      Variable::Nil
+    }),
+  );
+  global_scope.set(
+    Identifier("push"),
+    Variable::NativeFunction(|args| {
+      assert_eq!(args.len(), 2);
+      let mut args = args.into_iter();
+      let first = args.next().unwrap();
+      let second = args.next().unwrap();
+
+      match first {
+        Variable::List(mut list) => {
+          list.push(second);
+          Variable::List(list)
+        }
+        _ => panic!("push() can only be called on lists"),
+      }
+    }),
+  );
+  global_scope.set(
+    Identifier("pop"),
+    Variable::NativeFunction(|args| {
+      assert_eq!(args.len(), 1);
+      let first = args.into_iter().next().unwrap();
+
+      match first {
+        Variable::List(mut list) => {
+          list.pop().unwrap();
+          Variable::List(list)
+        }
+        _ => panic!("pop() can only be called on lists"),
+      }
+    }),
+  );
+  global_scope.set(
+    Identifier("len"),
+    Variable::NativeFunction(|args| {
+      assert_eq!(args.len(), 1);
+      let first = args.into_iter().next().unwrap();
+
+      match first {
+        Variable::String(string) => Variable::Number(string.len() as f64),
+        Variable::List(list) => Variable::Number(list.len() as f64),
+        _ => panic!("len() can only be called on strings and lists"),
+      }
+    }),
+  );
+  global_scope.set(
+    Identifier("input"),
+    Variable::NativeFunction(|args| {
+      assert_eq!(args.len(), 0);
+      let mut input = String::new();
+      std::io::stdin().read_line(&mut input).unwrap();
+      Variable::String(input)
+    }),
+  );
+  global_scope.set(
+    Identifier("type"),
+    Variable::NativeFunction(|args| {
+      assert_eq!(args.len(), 1);
+      let first = args.into_iter().next().unwrap();
+
+      match first {
+        Variable::String(_) => Variable::String("string".to_string()),
+        Variable::Number(_) => Variable::String("number".to_string()),
+        Variable::Bool(_) => Variable::String("bool".to_string()),
+        Variable::List(_) => Variable::String("list".to_string()),
+        Variable::Nil => Variable::String("nil".to_string()),
+        Variable::NativeFunction(_) => Variable::String("function".to_string()),
+        Variable::Function(_) => Variable::String("function".to_string()),
+        Variable::Map(_) => Variable::String("map".to_string()),
+      }
+    }),
+  );
+  global_scope.set(
+    Identifier("range"),
+    Variable::NativeFunction(|args| {
+      assert_eq!(args.len(), 2);
+      let mut args = args.into_iter();
+      let first = args.next().unwrap();
+      let second = args.next().unwrap();
+
+      match (first, second) {
+        (Variable::Number(first), Variable::Number(second)) => {
+          let mut list = Vec::new();
+          for i in first as usize..second as usize {
+            list.push(Variable::Number(i as f64));
+          }
+          Variable::List(list)
+        }
+        _ => panic!("range() can only be called on numbers"),
+      }
+    }),
+  );
+
+  global_scope.set(
+    Identifier("sort"),
+    Variable::NativeFunction(|args| {
+      assert_eq!(args.len(), 1);
+      let first = args.into_iter().next().unwrap();
+
+      match first {
+        Variable::List(mut list) => {
+          list.sort_by(|a, b| {
+            if let (Variable::Number(a), Variable::Number(b)) = (a, b) {
+              a.partial_cmp(b).unwrap()
+            } else {
+              panic!("sort() can only be called on lists of numbers")
+            }
+          });
+
+          Variable::List(list)
+        }
+        _ => panic!("sort() can only be called on lists"),
+      }
+    }),
+  );
+  global_scope.set(
+    Identifier("number"),
+    Variable::NativeFunction(|args| {
+      assert_eq!(args.len(), 1);
+      let first = args.into_iter().next().unwrap();
+
+      match first {
+        Variable::String(string) => Variable::Number(string.trim().parse::<f64>().unwrap()),
+        Variable::Number(number) => Variable::Number(number),
+        _ => panic!("number() can only be called on strings and numbers"),
+      }
+    }),
+  );
+  global_scope.set(
+    Identifier("string"),
+    Variable::NativeFunction(|args| {
+      assert_eq!(args.len(), 1);
+      let first = args.into_iter().next().unwrap();
+
+      match first {
+        Variable::String(string) => Variable::String(string),
+        Variable::Number(number) => Variable::String(number.to_string()),
+        _ => panic!("string() can only be called on strings and numbers"),
+      }
+    }),
+  );
+  global_scope.set(
+    Identifier("bool"),
+    Variable::NativeFunction(|args| {
+      assert_eq!(args.len(), 1);
+      let first = args.into_iter().next().unwrap();
+
+      match first {
+        Variable::String(string) => Variable::Bool(string.parse().unwrap()),
+        Variable::Number(number) => Variable::Bool(number != 0.0),
+        _ => panic!("bool() can only be called on strings and numbers"),
+      }
+    }),
+  );
+  global_scope.set(
+    Identifier("list"),
+    Variable::NativeFunction(|args| {
+      let mut list = Vec::new();
+      for arg in args {
+        list.push(arg);
+      }
+      Variable::List(list)
+    }),
+  );
+  global_scope.set(
+    Identifier("format"),
+    Variable::NativeFunction(|args| {
+      assert_eq!(args.len(), 2);
+      let mut args = args.into_iter();
+      let first = args.next().unwrap();
+      let second = args.next().unwrap();
+
+      match (first, second) {
+        (Variable::String(string), Variable::List(list)) => {
+          let mut string = string;
+          for item in list {
+            string = string.replace("{}", &format!("{}", item));
+          }
+          Variable::String(string)
+        }
+        _ => panic!("format() can only be called on a string and a list"),
+      }
+    }),
+  );
 }

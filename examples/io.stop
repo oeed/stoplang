@@ -1,0 +1,8 @@
+
+(([diff],"You are {} years away from being 100!")format)print
+(age - 100)string = diff
+(age_str)number = age
+
+(age_str)print
+()input = age_str
+("What is your age?")print

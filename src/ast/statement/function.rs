@@ -1,10 +1,10 @@
+use derive_more::Display;
+
+use super::Statement;
 use crate::{
   ast::{identifier::Identifier, AstResult, Location},
   token::{Grammar, Keyword, TokenStream},
 };
-use derive_more::Display;
-
-use super::Statement;
 
 #[derive(Debug, PartialEq, Clone, Display)]
 #[display(fmt = "Function({})", name)]

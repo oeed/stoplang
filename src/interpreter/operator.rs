@@ -1,7 +1,8 @@
 use super::{scope::ScopeStack, variable::Variable, RuntimeResult};
-use crate::ast::Location;
-use crate::interpreter::Eval;
-use crate::{ast::expression::Expression, token::Operator};
+use crate::{
+  ast::{expression::Expression, Location},
+  token::Operator,
+};
 
 impl Operator {
   pub fn eval<'a>(
@@ -13,11 +14,40 @@ impl Operator {
   ) -> RuntimeResult<Variable<'a>> {
     let left_loc = left.location();
     let left = left.eval(scope)?;
+
     match self {
-      Operator::Assign => {
-        scope.set(right.try_into_identifier()?, left);
-        return Ok(Variable::Nil);
-      }
+      Operator::Assign => match right {
+        Expression::Identifier(_, _) => {
+          scope.set(right.try_into_identifier()?, left);
+          return Ok(Variable::Nil);
+        }
+        Expression::Index { indexed, indices, .. } => {
+          // Only support 1 level of indexing for assignments
+          // The reason for this is that I can't figure out how to get a mutable refernce (that isn't cloned) to things in a
+          // nested map/list structure
+
+          // Therefore the only solution would be to recursively clone the entire list/map hierarchy
+          assert!(indices.len() > 0);
+          let index_values: Vec<_> = indices
+            .iter()
+            .map(|index| index.eval(scope))
+            .collect::<Result<_, _>>()?;
+
+          let location = right.location();
+          let mut indexed = scope.get_mut(indexed, location)?;
+          for (i, index) in index_values.into_iter().enumerate() {
+            if i == indices.len() - 1 {
+              indexed.set_at_index(index, left.clone(), right.location())?;
+            } else {
+              // only traverse the non-final index
+              indexed = indexed.get_at_index_mut(index, location)?;
+            }
+          }
+
+          return Ok(Variable::Nil);
+        }
+        _ => (),
+      },
       _ => (),
     }
 

@@ -1,0 +1,32 @@
+(countdown)list_print
+
+(countdown)sort = countdown
+(countdown)list_print
+
+{
+  (ls, print)map
+}
+(ls)list_print fn
+
+{
+  {
+    i + 1 = i
+    ([i]ls)f
+  } 
+  i < length while
+
+  (ls)len = length
+  0 = i
+}
+(ls, f) map fn
+
+((countdown)len)print
+(countdown)pop = countdown
+
+((countdown)len)print
+(11, countdown)push = countdown
+
+123 = [5]countdown
+
+((countdown)len)print
+[10, 9, 8, 7, 6, 5, 4, 3, 2, 1] = countdown
